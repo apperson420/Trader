@@ -1,9 +1,9 @@
 # Trader
 
-**v4.4 - Evolved**
+**v4.5 - Evolved**
 
-- Quantum-inspired Optimization
-- Genetic Algorithms
-- Particle Swarm Optimization
+- Full Mobile App (React Native)
+- Push Notifications
+- Biometric Authentication
 
 Continuing...
