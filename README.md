@@ -1,13 +1,11 @@
 # Trader
 
-**BTC Sovereign v3.1**
+**v3.2 - Evolved**
 
-## What's New
-- Strategy class system (Trend, Mean Reversion, Breakout)
-- Complete backtesting metrics suite
-- File logging
-- config.json support
+- Configuration System
+- Risk Management Engine
+- Multi-timeframe Analysis
+- Better UI
+- Order Management
 
-**Current Version:** v3.1
-
-Evolving step-by-step.
+Continuing evolution...
