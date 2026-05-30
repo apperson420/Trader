@@ -1,9 +1,9 @@
 # Trader
 
-**v3.4 - Evolved**
+**v3.5 - Evolved**
 
-- Live Dashboard with charts
-- Notification system
-- Better error recovery
+- ML Signal Filtering
+- Sentiment Analysis
+- Advanced Position Sizing
 
-Continuing evolution...
+Continuing...
