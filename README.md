@@ -1,13 +1,13 @@
 # Trader
 
-**BTC Sovereign v3.0 - Major Evolution**
+**BTC Sovereign v3.1**
 
-## What's New in v3.0
-- Proper BacktestingEngine with walk-forward optimization
-- Multi-strategy support (Trend Following, Mean Reversion, Breakout)
-- Improved UI with tabs
-- All previous features + better architecture
+## What's New
+- Strategy class system (Trend, Mean Reversion, Breakout)
+- Complete backtesting metrics suite
+- File logging
+- config.json support
 
-**Current Version:** v3.0
+**Current Version:** v3.1
 
-This project is evolving step-by-step toward a professional-grade trading platform.
+Evolving step-by-step.
