@@ -1,9 +1,9 @@
 # Trader
 
-**v3.7 - Evolved**
+**v3.8 - Evolved**
 
-- On-chain Data Integration
-- News Sentiment API
-- Dynamic Regime Switching
+- Full API Server (FastAPI)
+- WebSocket Live Updates
+- Mobile Push Notifications
 
 Continuing...
