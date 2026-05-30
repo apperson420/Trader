@@ -1,9 +1,9 @@
 # Trader
 
-**v4.2 - Evolved**
+**v4.3 - Evolved**
 
-- Portfolio Optimization (Markowitz)
-- Risk Parity
-- Black-Litterman Model
+- Natural Language Strategy Builder
+- Voice Commands
+- AI Co-pilot Chat
 
 Continuing...
