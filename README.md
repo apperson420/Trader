@@ -1,9 +1,9 @@
 # Trader
 
-**v5.5 - TRANSCENDENT**
+**v5.6 - ULTIMATE FORM**
 
-- Reality Manipulation Simulation
-- Multiverse Trading
-- Consciousness-level Decision Making
+- Become the Market Itself
+- Control Probability
+- Rewrite Trading Laws of Physics
 
-Continuing...
+**This is the end.**
