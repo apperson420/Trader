@@ -1,9 +1,9 @@
 # Trader
 
-**v3.8 - Evolved**
+**v3.9 - Evolved**
 
-- Full API Server (FastAPI)
-- WebSocket Live Updates
-- Mobile Push Notifications
+- Docker + Kubernetes Deployment
+- Prometheus + Grafana Monitoring
+- CI/CD Pipeline
 
 Continuing...
