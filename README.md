@@ -1,9 +1,9 @@
 # Trader
 
-**v3.5 - Evolved**
+**v3.6 - Evolved**
 
-- ML Signal Filtering
-- Sentiment Analysis
-- Advanced Position Sizing
+- Reinforcement Learning Agent
+- Multi-asset Correlation Matrix
+- Real-time Risk Dashboard
 
-Continuing...
+Continuing evolution...
