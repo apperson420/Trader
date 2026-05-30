@@ -1,11 +1,8 @@
 # Trader
 
-**v5.0 - MAJOR MILESTONE**
+**v5.1 - Evolved**
 
-**Full Production-Ready Institutional Trading Platform**
+- Quantum Computing Integration (Qiskit)
+- Hybrid Quantum-Classical Optimization
 
-This version contains everything developed over the evolution process.
-
-**Current Version:** v5.0
-
-**Status:** Production Ready
+Continuing...
