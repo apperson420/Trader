@@ -1,10 +1,9 @@
 # Trader
 
-**v4.0 - Evolved**
+**v4.1 - Evolved**
 
-- Multi-user Support
-- Role-based Access Control
-- Audit Logging
-- Compliance Module
+- Advanced Options Greeks Calculator
+- Volatility Surface
+- Implied Volatility Modeling
 
-Major milestone reached.
+Continuing...
