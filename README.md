@@ -1,9 +1,9 @@
 # Trader
 
-**v4.1 - Evolved**
+**v4.2 - Evolved**
 
-- Advanced Options Greeks Calculator
-- Volatility Surface
-- Implied Volatility Modeling
+- Portfolio Optimization (Markowitz)
+- Risk Parity
+- Black-Litterman Model
 
 Continuing...
