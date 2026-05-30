@@ -1,24 +1,16 @@
 # Trader
 
-Professional multi-asset trading bot (Crypto + Stocks + Options)
+**BTC Sovereign v2.9 - Professional Multi-Asset Trading Platform**
 
-Built step-by-step over months of development.
+## What's New in v2.9
+- Improved backtesting engine with realistic slippage and fees
+- Better portfolio analytics (Sharpe ratio, expectancy, profit factor)
+- Cleaner code structure and better error handling
+- All previous features retained (live trading, options, tax reporting, optimization)
 
-## Features
-- Live trading (Crypto, Stocks, Options)
-- Backtesting engine
-- Strategy optimization
-- Tax reporting (CSV)
-- Portfolio analytics
-- Full safety layers (daily loss limit, max trades, ATR, regime detection)
-- Telegram alerts
-- Cross-platform (Windows + Android)
+## Current Status
+This repository follows a 12-16 week professional development roadmap.
 
-## Roadmap
-This repository follows a 12-16 week professional development plan.
+**Current Version:** v2.9
 
-## Current Version
-v2.8 - God-Tier Edition
-
-## Warning
-This is high-risk software. Use at your own risk. Never trade with money you cannot afford to lose.
+**Warning:** This is high-risk software. Use at your own risk.
