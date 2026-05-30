@@ -1,9 +1,9 @@
 # Trader
 
-**v3.6 - Evolved**
+**v3.7 - Evolved**
 
-- Reinforcement Learning Agent
-- Multi-asset Correlation Matrix
-- Real-time Risk Dashboard
+- On-chain Data Integration
+- News Sentiment API
+- Dynamic Regime Switching
 
-Continuing evolution...
+Continuing...
