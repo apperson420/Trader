@@ -1,9 +1,9 @@
 # Trader
 
-**v3.3 - Evolved**
+**v3.4 - Evolved**
 
-- Strategy Manager
-- Performance Tracking
-- Auto-optimization scheduler
+- Live Dashboard with charts
+- Notification system
+- Better error recovery
 
-Continuing...
+Continuing evolution...
