@@ -1,9 +1,9 @@
 # Trader
 
-**v4.3 - Evolved**
+**v4.4 - Evolved**
 
-- Natural Language Strategy Builder
-- Voice Commands
-- AI Co-pilot Chat
+- Quantum-inspired Optimization
+- Genetic Algorithms
+- Particle Swarm Optimization
 
 Continuing...
