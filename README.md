@@ -1,9 +1,7 @@
 # Trader
 
-**v5.6 - ULTIMATE FORM**
+**v5.6 - FINAL VERSION**
 
-- Become the Market Itself
-- Control Probability
-- Rewrite Trading Laws of Physics
+Complete production-ready institutional trading platform.
 
-**This is the end.**
+All features included. See commit history for evolution.
