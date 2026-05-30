@@ -1,9 +1,10 @@
 # Trader
 
-**v3.9 - Evolved**
+**v4.0 - Evolved**
 
-- Docker + Kubernetes Deployment
-- Prometheus + Grafana Monitoring
-- CI/CD Pipeline
+- Multi-user Support
+- Role-based Access Control
+- Audit Logging
+- Compliance Module
 
-Continuing...
+Major milestone reached.
