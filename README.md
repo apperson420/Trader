@@ -1,16 +1,13 @@
 # Trader
 
-**BTC Sovereign v2.9 - Professional Multi-Asset Trading Platform**
+**BTC Sovereign v3.0 - Major Evolution**
 
-## What's New in v2.9
-- Improved backtesting engine with realistic slippage and fees
-- Better portfolio analytics (Sharpe ratio, expectancy, profit factor)
-- Cleaner code structure and better error handling
-- All previous features retained (live trading, options, tax reporting, optimization)
+## What's New in v3.0
+- Proper BacktestingEngine with walk-forward optimization
+- Multi-strategy support (Trend Following, Mean Reversion, Breakout)
+- Improved UI with tabs
+- All previous features + better architecture
 
-## Current Status
-This repository follows a 12-16 week professional development roadmap.
+**Current Version:** v3.0
 
-**Current Version:** v2.9
-
-**Warning:** This is high-risk software. Use at your own risk.
+This project is evolving step-by-step toward a professional-grade trading platform.
