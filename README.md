@@ -1,11 +1,9 @@
 # Trader
 
-**v3.2 - Evolved**
+**v3.3 - Evolved**
 
-- Configuration System
-- Risk Management Engine
-- Multi-timeframe Analysis
-- Better UI
-- Order Management
+- Strategy Manager
+- Performance Tracking
+- Auto-optimization scheduler
 
-Continuing evolution...
+Continuing...
