@@ -3,57 +3,110 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Trader Command Center - governed paper-trading dashboard." />
+    <meta name="description" content="Trader Command Center - governed paper trading, risk planning, watchlist, and journal dashboard." />
     <title>Trader Command Center</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <main class="shell">
-      <section class="hero">
-        <div class="badge">Deployment fixed • Vercel ready</div>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Governed trading workspace</p>
         <h1>Trader Command Center</h1>
-        <p class="subtitle">
-          A governed trading dashboard shell for market research, paper-trading workflows, risk controls,
-          and deployment verification. Live trading should stay locked until real broker credentials,
-          compliance checks, and user approval gates are configured.
-        </p>
-        <div class="actions">
-          <a class="button primary" href="#dashboard">Open Dashboard</a>
-          <a class="button" href="#safety">Safety Controls</a>
-        </div>
-      </section>
+      </div>
+      <div class="status-pill">Paper mode locked</div>
+    </header>
 
-      <section id="dashboard" class="grid">
-        <article class="card accent">
-          <span class="label">Status</span>
-          <h2>Online</h2>
-          <p>The web entrypoint is now present, so Vercel has a page to serve instead of a 404.</p>
-        </article>
-        <article class="card">
-          <span class="label">Mode</span>
-          <h2>Paper / Research</h2>
-          <p>Default mode is non-executing. Add broker APIs only behind explicit approval gates.</p>
-        </article>
-        <article class="card">
-          <span class="label">Risk</span>
-          <h2>Locked</h2>
-          <p>Position sizing, max-loss limits, and trade confirmation should be required before live use.</p>
-        </article>
-      </section>
-
-      <section id="safety" class="panel">
+    <main class="shell">
+      <section class="hero panel">
         <div>
-          <span class="label">Production checklist</span>
-          <h2>Next hardening steps</h2>
+          <span class="badge">Vercel live • GitHub connected • Safe by default</span>
+          <h2>Research, plan, journal, and simulate trades without live execution.</h2>
+          <p>
+            This version is a browser-based command center that runs fully on the deployed site.
+            It does not place real trades, does not connect to a broker, and does not store API keys.
+          </p>
         </div>
-        <ul class="checklist">
-          <li>Enable Vercel Web Analytics and Speed Insights.</li>
-          <li>Keep API keys in Vercel Environment Variables only.</li>
-          <li>Add authentication before exposing private trading tools.</li>
-          <li>Use paper trading until real broker execution is tested and approved.</li>
+        <div class="hero-card">
+          <span class="label">Current operating mode</span>
+          <strong>Paper / Research</strong>
+          <small>Live trading remains disabled until broker credentials, auth, risk controls, and approval gates are intentionally added.</small>
+        </div>
+      </section>
+
+      <section class="grid stats" aria-label="Dashboard summary">
+        <article class="card"><span class="label">Watchlist</span><strong id="watchCount">0</strong><small>tracked symbols</small></article>
+        <article class="card"><span class="label">Journal</span><strong id="journalCount">0</strong><small>saved notes</small></article>
+        <article class="card"><span class="label">Risk per trade</span><strong id="riskSummary">$0</strong><small>from calculator</small></article>
+        <article class="card"><span class="label">Readiness</span><strong id="readinessScore">72%</strong><small>paper-ready score</small></article>
+      </section>
+
+      <section class="grid two">
+        <article class="panel">
+          <div class="section-head">
+            <div><span class="label">Watchlist</span><h3>Add symbols to track</h3></div>
+            <button id="clearWatchlist" class="ghost">Clear</button>
+          </div>
+          <form id="watchForm" class="row-form">
+            <input id="symbolInput" placeholder="BTC, ETH, SPY, NVDA" autocomplete="off" />
+            <button>Add</button>
+          </form>
+          <div id="watchlist" class="list"></div>
+        </article>
+
+        <article class="panel">
+          <div class="section-head"><div><span class="label">Risk calculator</span><h3>Position planning</h3></div></div>
+          <div class="form-grid">
+            <label>Account size <input id="accountSize" type="number" min="0" value="1000" /></label>
+            <label>Risk % <input id="riskPercent" type="number" min="0" step="0.1" value="1" /></label>
+            <label>Entry price <input id="entryPrice" type="number" min="0" step="0.01" value="100" /></label>
+            <label>Stop price <input id="stopPrice" type="number" min="0" step="0.01" value="95" /></label>
+          </div>
+          <div class="result-box">
+            <div><span>Max risk</span><strong id="maxRisk">$10.00</strong></div>
+            <div><span>Suggested units</span><strong id="suggestedUnits">2.0000</strong></div>
+          </div>
+        </article>
+      </section>
+
+      <section class="grid two">
+        <article class="panel">
+          <div class="section-head"><div><span class="label">Paper trade simulator</span><h3>Dry-run an idea</h3></div></div>
+          <form id="tradeForm" class="form-grid">
+            <label>Symbol <input id="tradeSymbol" value="BTC" /></label>
+            <label>Direction <select id="tradeDirection"><option>Long</option><option>Short</option></select></label>
+            <label>Entry <input id="tradeEntry" type="number" value="100" /></label>
+            <label>Target <input id="tradeTarget" type="number" value="110" /></label>
+            <label>Stop <input id="tradeStop" type="number" value="95" /></label>
+            <button class="wide">Simulate paper trade</button>
+          </form>
+          <div id="tradeOutput" class="result-box stacked"></div>
+        </article>
+
+        <article class="panel">
+          <div class="section-head"><div><span class="label">Trading journal</span><h3>Save a note</h3></div><button id="clearJournal" class="ghost">Clear</button></div>
+          <form id="journalForm" class="journal-form">
+            <input id="journalTitle" placeholder="Trade idea title" />
+            <textarea id="journalText" placeholder="Why this setup matters, risk, invalidation, lesson learned"></textarea>
+            <button>Save journal note</button>
+          </form>
+          <div id="journalList" class="list"></div>
+        </article>
+      </section>
+
+      <section class="panel safety">
+        <span class="label">Safety and production checklist</span>
+        <h3>Before this ever becomes live trading</h3>
+        <ul>
+          <li>Keep broker and market-data API keys server-side only, never in browser JavaScript.</li>
+          <li>Add authentication before exposing private dashboards.</li>
+          <li>Require explicit approval before any external action or order execution.</li>
+          <li>Use paper trading and audit logs until the strategy is tested independently.</li>
+          <li>No profit guarantees. This dashboard is for planning and education, not financial advice.</li>
         </ul>
       </section>
     </main>
+
+    <footer>Trader Command Center • local browser storage only • no real orders placed</footer>
     <script src="./app.js"></script>
   </body>
 </html>
