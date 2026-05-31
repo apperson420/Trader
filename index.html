@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Trader Command Center - governed paper trading, risk planning, watchlist, and journal dashboard." />
+    <meta name="description" content="Trader Command Center - governed paper trading, smart setup scoring, risk planning, watchlist, and journal dashboard." />
     <title>Trader Command Center</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
@@ -19,8 +19,8 @@
     <main class="shell">
       <section class="hero panel">
         <div>
-          <span class="badge">Vercel live • GitHub connected • Safe by default</span>
-          <h2>Research, plan, journal, and simulate trades without live execution.</h2>
+          <span class="badge">Vercel live • GitHub connected • Smart paper-trading layer</span>
+          <h2>Research, score, plan, journal, and simulate trades without live execution.</h2>
           <p>
             This version is a browser-based command center that runs fully on the deployed site.
             It does not place real trades, does not connect to a broker, and does not store API keys.
@@ -29,7 +29,7 @@
         <div class="hero-card">
           <span class="label">Current operating mode</span>
           <strong>Paper / Research</strong>
-          <small>Live trading remains disabled until broker credentials, auth, risk controls, and approval gates are intentionally added.</small>
+          <small>Live trading remains disabled until broker credentials, authentication, risk controls, and approval gates are intentionally added.</small>
         </div>
       </section>
 
@@ -37,7 +37,7 @@
         <article class="card"><span class="label">Watchlist</span><strong id="watchCount">0</strong><small>tracked symbols</small></article>
         <article class="card"><span class="label">Journal</span><strong id="journalCount">0</strong><small>saved notes</small></article>
         <article class="card"><span class="label">Risk per trade</span><strong id="riskSummary">$0</strong><small>from calculator</small></article>
-        <article class="card"><span class="label">Readiness</span><strong id="readinessScore">72%</strong><small>paper-ready score</small></article>
+        <article class="card"><span class="label">Smart score</span><strong id="smartScore">0%</strong><small>setup quality</small></article>
       </section>
 
       <section class="grid two">
@@ -80,6 +80,43 @@
             <button class="wide">Simulate paper trade</button>
           </form>
           <div id="tradeOutput" class="result-box stacked"></div>
+        </article>
+
+        <article class="panel smart-panel">
+          <div class="section-head"><div><span class="label">Smart Analyst</span><h3>Score the setup before you act</h3></div></div>
+          <div class="form-grid">
+            <label>Market regime
+              <select id="marketRegime"><option>Trending up</option><option>Trending down</option><option>Choppy / sideways</option><option>High volatility</option></select>
+            </label>
+            <label>Trend alignment
+              <select id="trendAlignment"><option>Aligned with trade</option><option>Mixed / uncertain</option><option>Against trade</option></select>
+            </label>
+            <label>News risk
+              <select id="newsRisk"><option>Low</option><option>Medium</option><option>High</option></select>
+            </label>
+            <label>Timeframe
+              <select id="timeframe"><option>Intraday</option><option>Swing</option><option>Position</option></select>
+            </label>
+            <label>Confidence discipline
+              <select id="confidence"><option>Calm and rule-based</option><option>Unsure</option><option>Overconfident / revenge-trade risk</option></select>
+            </label>
+            <button id="runSmartReview" class="wide" type="button">Run Smart Review</button>
+          </div>
+          <div id="smartOutput" class="result-box stacked"></div>
+        </article>
+      </section>
+
+      <section class="grid two">
+        <article class="panel">
+          <div class="section-head"><div><span class="label">Trade checklist</span><h3>Readiness guardrails</h3></div><strong id="checklistScore">0/6</strong></div>
+          <div class="checklist-controls">
+            <label><input type="checkbox" class="tradeCheck" value="Plan written"> Plan is written in plain English</label>
+            <label><input type="checkbox" class="tradeCheck" value="Stop defined"> Stop loss is defined before entry</label>
+            <label><input type="checkbox" class="tradeCheck" value="Reward risk acceptable"> Reward/risk is acceptable</label>
+            <label><input type="checkbox" class="tradeCheck" value="Risk small"> Risk is 1% or less, or intentionally justified</label>
+            <label><input type="checkbox" class="tradeCheck" value="No emotional trade"> No FOMO, revenge trade, or panic entry</label>
+            <label><input type="checkbox" class="tradeCheck" value="Journal ready"> Journal note will be saved after the trade</label>
+          </div>
         </article>
 
         <article class="panel">
