@@ -1,0 +1,14 @@
+{
+  "name": "trader-command-center",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Governed AI paper-trading command center with safe autonomy, market intelligence, and beginner coaching.",
+  "scripts": {
+    "test": "node tools/check-syntax.mjs",
+    "test:syntax": "node tools/check-syntax.mjs",
+    "test:smoke": "node tools/smoke-live.mjs",
+    "release:manifest": "node tools/release-manifest.mjs"
+  },
+  "devDependencies": {}
+}
