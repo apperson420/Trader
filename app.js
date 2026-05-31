@@ -1,105 +1,24 @@
-const store = {
-  get watchlist() { return JSON.parse(localStorage.getItem('trader_watchlist') || '[]'); },
-  set watchlist(v) { localStorage.setItem('trader_watchlist', JSON.stringify(v)); },
-  get journal() { return JSON.parse(localStorage.getItem('trader_journal') || '[]'); },
-  set journal(v) { localStorage.setItem('trader_journal', JSON.stringify(v)); }
-};
-
-const $ = (id) => document.getElementById(id);
-const money = (n) => new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(Number.isFinite(n) ? n : 0);
-
-function updateCounts() {
-  $('watchCount').textContent = store.watchlist.length;
-  $('journalCount').textContent = store.journal.length;
-}
-
-function renderWatchlist() {
-  const box = $('watchlist');
-  const symbols = store.watchlist;
-  box.innerHTML = symbols.length ? '' : '<p class="muted">No symbols yet. Add one above.</p>';
-  symbols.forEach((symbol) => {
-    const item = document.createElement('div');
-    item.className = 'item';
-    item.innerHTML = `<div><strong>${symbol}</strong><p>Research-only watchlist item.</p></div><button class="ghost" data-remove="${symbol}">Remove</button>`;
-    box.appendChild(item);
-  });
-  box.querySelectorAll('[data-remove]').forEach((button) => {
-    button.addEventListener('click', () => {
-      store.watchlist = store.watchlist.filter((s) => s !== button.dataset.remove);
-      renderWatchlist();
-      updateCounts();
-    });
-  });
-}
-
-function calculateRisk() {
-  const account = Number($('accountSize').value || 0);
-  const pct = Number($('riskPercent').value || 0);
-  const entry = Number($('entryPrice').value || 0);
-  const stop = Number($('stopPrice').value || 0);
-  const risk = account * (pct / 100);
-  const perUnit = Math.abs(entry - stop);
-  const units = perUnit > 0 ? risk / perUnit : 0;
-  $('maxRisk').textContent = money(risk);
-  $('riskSummary').textContent = money(risk);
-  $('suggestedUnits').textContent = units.toFixed(4);
-}
-
-function renderJournal() {
-  const box = $('journalList');
-  const notes = store.journal;
-  box.innerHTML = notes.length ? '' : '<p class="muted">No journal notes yet.</p>';
-  notes.slice().reverse().forEach((note) => {
-    const item = document.createElement('div');
-    item.className = 'item';
-    item.innerHTML = `<div><strong>${note.title}</strong><p>${note.text}</p><p>${note.date}</p></div>`;
-    box.appendChild(item);
-  });
-}
-
-$('watchForm').addEventListener('submit', (event) => {
-  event.preventDefault();
-  const symbol = $('symbolInput').value.trim().toUpperCase().replace(/[^A-Z0-9.-]/g, '');
-  if (!symbol) return;
-  const symbols = [...new Set([...store.watchlist, symbol])];
-  store.watchlist = symbols;
-  $('symbolInput').value = '';
-  renderWatchlist();
-  updateCounts();
-});
-
-$('clearWatchlist').addEventListener('click', () => { store.watchlist = []; renderWatchlist(); updateCounts(); });
-['accountSize','riskPercent','entryPrice','stopPrice'].forEach((id) => $(id).addEventListener('input', calculateRisk));
-
-$('tradeForm').addEventListener('submit', (event) => {
-  event.preventDefault();
-  const symbol = $('tradeSymbol').value.trim().toUpperCase() || 'UNKNOWN';
-  const direction = $('tradeDirection').value;
-  const entry = Number($('tradeEntry').value || 0);
-  const target = Number($('tradeTarget').value || 0);
-  const stop = Number($('tradeStop').value || 0);
-  const reward = Math.abs(target - entry);
-  const risk = Math.abs(entry - stop);
-  const rr = risk > 0 ? reward / risk : 0;
-  const verdict = rr >= 2 ? 'Strong paper setup' : rr >= 1 ? 'Needs review' : 'Weak risk/reward';
-  $('tradeOutput').innerHTML = `<div><span>${symbol} ${direction}</span><strong>${verdict}</strong><p>Reward/risk ratio: ${rr.toFixed(2)}R. This is a simulation only; no order was sent.</p></div>`;
-});
-
-$('journalForm').addEventListener('submit', (event) => {
-  event.preventDefault();
-  const title = $('journalTitle').value.trim() || 'Untitled note';
-  const text = $('journalText').value.trim();
-  if (!text) return;
-  store.journal = [...store.journal, { title, text, date: new Date().toLocaleString() }];
-  $('journalTitle').value = '';
-  $('journalText').value = '';
-  renderJournal();
-  updateCounts();
-});
-
-$('clearJournal').addEventListener('click', () => { store.journal = []; renderJournal(); updateCounts(); });
-
-renderWatchlist();
-renderJournal();
-calculateRisk();
-updateCounts();
+const store={get watchlist(){return JSON.parse(localStorage.getItem('trader_watchlist')||'[]')},set watchlist(v){localStorage.setItem('trader_watchlist',JSON.stringify(v))},get journal(){return JSON.parse(localStorage.getItem('trader_journal')||'[]')},set journal(v){localStorage.setItem('trader_journal',JSON.stringify(v))},get checks(){return JSON.parse(localStorage.getItem('trader_checks')||'[]')},set checks(v){localStorage.setItem('trader_checks',JSON.stringify(v))}};
+const $=(id)=>document.getElementById(id);
+const money=(n)=>new Intl.NumberFormat(undefined,{style:'currency',currency:'USD'}).format(Number.isFinite(n)?n:0);
+const clean=(v)=>String(v||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+function riskData(){const account=Number($('accountSize').value||0),pct=Number($('riskPercent').value||0),entry=Number($('entryPrice').value||0),stop=Number($('stopPrice').value||0);const risk=account*(pct/100),perUnit=Math.abs(entry-stop),units=perUnit>0?risk/perUnit:0;return{account,pct,entry,stop,risk,perUnit,units}}
+function planData(){const symbol=$('tradeSymbol').value.trim().toUpperCase()||'UNKNOWN',direction=$('tradeDirection').value,entry=Number($('tradeEntry').value||0),target=Number($('tradeTarget').value||0),stop=Number($('tradeStop').value||0);const reward=Math.abs(target-entry),risk=Math.abs(entry-stop),rr=risk>0?reward/risk:0;return{symbol,direction,entry,target,stop,reward,risk,rr}}
+function updateCounts(){ $('watchCount').textContent=store.watchlist.length;$('journalCount').textContent=store.journal.length;updateSmartScore(false)}
+function renderWatchlist(){const box=$('watchlist'),symbols=store.watchlist;box.innerHTML=symbols.length?'':'<p class="muted">No symbols yet. Add one above.</p>';symbols.forEach(symbol=>{const item=document.createElement('div');item.className='item';item.innerHTML=`<div><strong>${clean(symbol)}</strong><p>Research-only watchlist item.</p></div><button class="ghost" data-remove="${clean(symbol)}">Remove</button>`;box.appendChild(item)});box.querySelectorAll('[data-remove]').forEach(button=>button.addEventListener('click',()=>{store.watchlist=store.watchlist.filter(s=>s!==button.dataset.remove);renderWatchlist();updateCounts()}))}
+function calculateRisk(){const d=riskData();$('maxRisk').textContent=money(d.risk);$('riskSummary').textContent=money(d.risk);$('suggestedUnits').textContent=d.units.toFixed(4);updateSmartScore(false)}
+function renderJournal(){const box=$('journalList'),notes=store.journal;box.innerHTML=notes.length?'':'<p class="muted">No journal notes yet.</p>';notes.slice().reverse().forEach(note=>{const item=document.createElement('div');item.className='item';item.innerHTML=`<div><strong>${clean(note.title)}</strong><p>${clean(note.text)}</p><p>${clean(note.date)}</p></div>`;box.appendChild(item)})}
+function updateChecklist(){const values=Array.from(document.querySelectorAll('.tradeCheck:checked')).map(x=>x.value);store.checks=values;$('checklistScore').textContent=`${values.length}/6`;updateSmartScore(false)}
+function restoreChecklist(){const values=new Set(store.checks);document.querySelectorAll('.tradeCheck').forEach(box=>{box.checked=values.has(box.value);box.addEventListener('change',updateChecklist)});updateChecklist()}
+function smartReview(){const plan=planData(),risk=riskData(),checks=store.checks.length,regime=$('marketRegime').value,trend=$('trendAlignment').value,news=$('newsRisk').value,confidence=$('confidence').value;let score=50;const strengths=[],warnings=[];if(plan.rr>=3){score+=18;strengths.push('Excellent reward/risk ratio.')}else if(plan.rr>=2){score+=12;strengths.push('Reward/risk clears a strong planning threshold.')}else if(plan.rr>=1){score+=2;warnings.push('Reward/risk is only moderate.')}else{score-=18;warnings.push('Reward/risk is weak.')}if(risk.pct>0&&risk.pct<=1){score+=12;strengths.push('Risk is controlled at 1% or less.')}else if(risk.pct>1&&risk.pct<=2){score+=2;warnings.push('Risk is above conservative sizing.')}else{score-=12;warnings.push('Risk percent needs review.')}if(trend==='Aligned with trade'){score+=12;strengths.push('Trend alignment supports the idea.')}if(trend==='Mixed / uncertain'){score-=3;warnings.push('Trend alignment is uncertain.')}if(trend==='Against trade'){score-=15;warnings.push('The idea is against the selected trend.')}if(news==='Low')score+=6;if(news==='Medium'){score-=3;warnings.push('Medium news risk.')}if(news==='High'){score-=15;warnings.push('High news risk.')}if(regime==='Trending up'&&plan.direction==='Long')score+=5;if(regime==='Trending down'&&plan.direction==='Short')score+=5;if(regime==='Choppy / sideways')warnings.push('Choppy markets can punish late entries.');if(regime==='High volatility'){score-=5;warnings.push('High volatility requires smaller sizing.')}if(confidence==='Calm and rule-based')score+=8;if(confidence==='Unsure'){score-=5;warnings.push('Uncertainty suggests slowing down.')}if(confidence==='Overconfident / revenge-trade risk'){score-=20;warnings.push('Emotional decision risk detected.')}score+=checks*3;if(checks<4)warnings.push('Checklist is incomplete.');if(store.watchlist.includes(plan.symbol))score+=3;else warnings.push(`${plan.symbol} is not in your watchlist yet.`);score=Math.max(0,Math.min(100,Math.round(score)));const verdict=score>=80?'High-quality paper setup':score>=65?'Good, but verify first':score>=45?'Needs improvement':'Skip or rebuild the idea';const action=score>=80?'Paper-only plan looks prepared.':score>=65?'Improve weak points before trusting the plan.':score>=45?'Fix risk, trend, or checklist gaps.':'Stand down and rebuild the setup.';return{score,verdict,action,strengths,warnings,plan,risk,checks}}
+function renderSmartReview(review){const strengths=review.strengths.length?review.strengths.map(x=>`<li>${clean(x)}</li>`).join(''):'<li>No major strengths detected yet.</li>';const warnings=review.warnings.length?review.warnings.map(x=>`<li>${clean(x)}</li>`).join(''):'<li>No major warnings from the current inputs.</li>';$('smartOutput').innerHTML=`<div><span>${clean(review.plan.symbol)} smart review</span><strong>${review.score}% - ${clean(review.verdict)}</strong><p>${clean(review.action)}</p><div class="mini-grid"><span>R/R: ${review.plan.rr.toFixed(2)}R</span><span>Risk: ${review.risk.pct.toFixed(2)}%</span><span>Checklist: ${review.checks}/6</span></div><h4>Strengths</h4><ul>${strengths}</ul><h4>Warnings</h4><ul>${warnings}</ul><button id="saveSmartReview" type="button">Save review to journal</button></div>`;$('saveSmartReview').addEventListener('click',()=>{const note=`${review.verdict} (${review.score}%). ${review.action} R/R ${review.plan.rr.toFixed(2)}R. Warnings: ${review.warnings.join(' ')||'None.'}`;store.journal=[...store.journal,{title:`Smart review: ${review.plan.symbol}`,text:note,date:new Date().toLocaleString()}];renderJournal();updateCounts()})}
+function updateSmartScore(show){if(!$('smartScore'))return;const r=smartReview();$('smartScore').textContent=`${r.score}%`;if(show)renderSmartReview(r)}
+$('watchForm').addEventListener('submit',event=>{event.preventDefault();const symbol=$('symbolInput').value.trim().toUpperCase().replace(/[^A-Z0-9.-]/g,'');if(!symbol)return;store.watchlist=[...new Set([...store.watchlist,symbol])];$('tradeSymbol').value=symbol;$('symbolInput').value='';renderWatchlist();updateCounts()});
+$('clearWatchlist').addEventListener('click',()=>{store.watchlist=[];renderWatchlist();updateCounts()});
+['accountSize','riskPercent','entryPrice','stopPrice'].forEach(id=>$(id).addEventListener('input',calculateRisk));
+['tradeSymbol','tradeDirection','tradeEntry','tradeTarget','tradeStop','marketRegime','trendAlignment','newsRisk','timeframe','confidence'].forEach(id=>$(id).addEventListener('input',()=>updateSmartScore(false)));
+$('runSmartReview').addEventListener('click',()=>updateSmartScore(true));
+$('tradeForm').addEventListener('submit',event=>{event.preventDefault();const p=planData();const verdict=p.rr>=2?'Strong paper setup':p.rr>=1?'Needs review':'Weak risk/reward';$('tradeOutput').innerHTML=`<div><span>${clean(p.symbol)} ${clean(p.direction)}</span><strong>${verdict}</strong><p>Reward/risk ratio: ${p.rr.toFixed(2)}R. This is a simulation only; no order was sent.</p></div>`;updateSmartScore(true)});
+$('journalForm').addEventListener('submit',event=>{event.preventDefault();const title=$('journalTitle').value.trim()||'Untitled note',text=$('journalText').value.trim();if(!text)return;store.journal=[...store.journal,{title,text,date:new Date().toLocaleString()}];$('journalTitle').value='';$('journalText').value='';renderJournal();updateCounts()});
+$('clearJournal').addEventListener('click',()=>{store.journal=[];renderJournal();updateCounts()});
+renderWatchlist();renderJournal();restoreChecklist();calculateRisk();updateCounts();updateSmartScore(true);
