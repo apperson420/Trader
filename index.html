@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Trader Command Center - governed paper-trading dashboard." />
+    <title>Trader Command Center</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <div class="badge">Deployment fixed • Vercel ready</div>
+        <h1>Trader Command Center</h1>
+        <p class="subtitle">
+          A governed trading dashboard shell for market research, paper-trading workflows, risk controls,
+          and deployment verification. Live trading should stay locked until real broker credentials,
+          compliance checks, and user approval gates are configured.
+        </p>
+        <div class="actions">
+          <a class="button primary" href="#dashboard">Open Dashboard</a>
+          <a class="button" href="#safety">Safety Controls</a>
+        </div>
+      </section>
+
+      <section id="dashboard" class="grid">
+        <article class="card accent">
+          <span class="label">Status</span>
+          <h2>Online</h2>
+          <p>The web entrypoint is now present, so Vercel has a page to serve instead of a 404.</p>
+        </article>
+        <article class="card">
+          <span class="label">Mode</span>
+          <h2>Paper / Research</h2>
+          <p>Default mode is non-executing. Add broker APIs only behind explicit approval gates.</p>
+        </article>
+        <article class="card">
+          <span class="label">Risk</span>
+          <h2>Locked</h2>
+          <p>Position sizing, max-loss limits, and trade confirmation should be required before live use.</p>
+        </article>
+      </section>
+
+      <section id="safety" class="panel">
+        <div>
+          <span class="label">Production checklist</span>
+          <h2>Next hardening steps</h2>
+        </div>
+        <ul class="checklist">
+          <li>Enable Vercel Web Analytics and Speed Insights.</li>
+          <li>Keep API keys in Vercel Environment Variables only.</li>
+          <li>Add authentication before exposing private trading tools.</li>
+          <li>Use paper trading until real broker execution is tested and approved.</li>
+        </ul>
+      </section>
+    </main>
+    <script src="./app.js"></script>
+  </body>
+</html>
