@@ -22,4 +22,4 @@ $('tradeForm').addEventListener('submit',event=>{event.preventDefault();const p=
 $('journalForm').addEventListener('submit',event=>{event.preventDefault();const title=$('journalTitle').value.trim()||'Untitled note',text=$('journalText').value.trim();if(!text)return;store.journal=[...store.journal,{title,text,date:new Date().toLocaleString()}];$('journalTitle').value='';$('journalText').value='';renderJournal();updateCounts()});
 $('clearJournal').addEventListener('click',()=>{store.journal=[];renderJournal();updateCounts()});
 renderWatchlist();renderJournal();restoreChecklist();calculateRisk();updateCounts();updateSmartScore(true);
-['autonomous-engine.js','ai-brain.js','market-intel.js','ai-chat.js','free-tools-hub.js'].forEach(src=>{const s=document.createElement('script');s.src='./'+src;document.body.appendChild(s)});
+['autonomous-engine.js','ai-brain.js','market-intel.js','ai-chat.js','free-tools-hub.js','paper-broker.js','chart-engine.js'].forEach(src=>{const s=document.createElement('script');s.src='./'+src;document.body.appendChild(s)});
