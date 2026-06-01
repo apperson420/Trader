@@ -1,10 +1,11 @@
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { extname, resolve, sep } from 'node:path';
+import { createServer } from 'node:http';
 
 const root = process.cwd();
+const rootPrefix = root.endsWith(sep) ? root : `${root}${sep}`;
 const artifactDir = resolve(root, 'artifacts', 'qa');
 const html = readFileSync(resolve(root, 'index.html'), 'utf8');
-const fileUrl = `file:///${resolve(root, 'index.html').replace(/\\/g, '/')}`;
 const report = {
   name: 'browser-ui-smoke',
   generatedAt: new Date().toISOString(),
@@ -44,6 +45,100 @@ function writeReport() {
   writeFileSync(resolve(artifactDir, 'browser-ui-smoke.json'), JSON.stringify(report, null, 2));
 }
 
+const contentTypes = new Map([
+  ['.html', 'text/html; charset=utf-8'],
+  ['.js', 'text/javascript; charset=utf-8'],
+  ['.css', 'text/css; charset=utf-8'],
+  ['.json', 'application/json; charset=utf-8'],
+  ['.svg', 'image/svg+xml; charset=utf-8']
+]);
+
+function jsonResponse(res, status, body) {
+  res.writeHead(status, {
+    'content-type': 'application/json; charset=utf-8',
+    'cache-control': 'no-store'
+  });
+  res.end(JSON.stringify(body));
+}
+
+function mockApiResponse(req, res) {
+  const url = new URL(req.url, 'http://127.0.0.1');
+  if (url.pathname === '/api/alpaca-paper') {
+    jsonResponse(res, 200, {
+      ok: false,
+      configured: false,
+      paperOnly: true,
+      checks: {
+        ALPACA_PAPER_KEY_ID: false,
+        ALPACA_PAPER_SECRET_KEY: false,
+        ALPACA_PAPER_BASE_URL: true
+      },
+      message: 'Playwright smoke: paper setup missing safely.'
+    });
+    return true;
+  }
+  if (url.pathname === '/api/persistence') {
+    jsonResponse(res, 200, { ok: true, configured: false, mode: 'localStorage_fallback' });
+    return true;
+  }
+  if (url.pathname === '/api/market') {
+    jsonResponse(res, 200, {
+      ok: true,
+      symbol: url.searchParams.get('symbol') || 'BTC',
+      price: 65000,
+      source: 'smoke',
+      mode: 'read_only_market_data',
+      assetClass: 'crypto',
+      time: new Date().toISOString()
+    });
+    return true;
+  }
+  if (url.pathname === '/api/history') {
+    jsonResponse(res, 200, { ok: false, message: 'Use deterministic fallback candles.' });
+    return true;
+  }
+  if (url.pathname.startsWith('/api/')) {
+    jsonResponse(res, 405, { ok: false, message: 'Smoke mock only supports safe read/setup endpoints.' });
+    return true;
+  }
+  return false;
+}
+
+async function startSmokeServer() {
+  const server = createServer((req, res) => {
+    try {
+      if (mockApiResponse(req, res)) return;
+      const url = new URL(req.url, 'http://127.0.0.1');
+      const pathname = url.pathname === '/' ? '/index.html' : decodeURIComponent(url.pathname);
+      const segments = pathname.replace(/^\/+/, '').split('/').filter(Boolean);
+      const filePath = resolve(root, ...segments);
+      if (!(filePath === root || filePath.startsWith(rootPrefix)) || !existsSync(filePath)) {
+        res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+        res.end('Not found');
+        return;
+      }
+      const ext = extname(filePath).toLowerCase();
+      res.writeHead(200, {
+        'content-type': contentTypes.get(ext) || 'application/octet-stream',
+        'cache-control': 'no-store'
+      });
+      res.end(readFileSync(filePath));
+    } catch (error) {
+      res.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' });
+      res.end(`Smoke server error: ${error.message}`);
+    }
+  });
+  await new Promise((resolveListen, rejectListen) => {
+    server.once('error', rejectListen);
+    server.listen(0, '127.0.0.1', () => resolveListen());
+  });
+  const { port } = server.address();
+  return {
+    url: `http://127.0.0.1:${port}/`,
+    close: () => new Promise((resolveClose) => server.close(resolveClose))
+  };
+}
+
 async function tryPlaywrightSmoke() {
   let playwright;
   try {
@@ -60,54 +155,39 @@ async function tryPlaywrightSmoke() {
     return false;
   }
   report.mode = 'playwright-chromium';
+  const smokeServer = await startSmokeServer();
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (msg) => { if (msg.type() === 'error') errors.push(msg.text()); });
-  await page.route('**/api/**', async (route) => {
-    const url = route.request().url();
-    if (url.includes('/api/alpaca-paper')) {
-      await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: false, configured: false, paperOnly: true, checks: { ALPACA_PAPER_KEY_ID: false, ALPACA_PAPER_SECRET_KEY: false, ALPACA_PAPER_BASE_URL: true }, message: 'Playwright smoke: paper setup missing safely.' }) });
-      return;
-    }
-    if (url.includes('/api/persistence')) {
-      await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, configured: false, mode: 'localStorage_fallback' }) });
-      return;
-    }
-    if (url.includes('/api/market')) {
-      await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, symbol: 'BTC', price: 65000, source: 'smoke', mode: 'read_only_market_data', assetClass: 'crypto', time: new Date().toISOString() }) });
-      return;
-    }
-    if (url.includes('/api/history')) {
-      await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: false, message: 'Use deterministic fallback candles.' }) });
-      return;
-    }
-    await route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ ok: false }) });
-  });
-  await page.goto(fileUrl, { waitUntil: 'domcontentloaded' });
-  await page.fill('#symbolInput', 'ETH');
-  await page.click('#watchForm button');
-  await page.fill('#journalTitle', 'Smoke note');
-  await page.fill('#journalText', 'Paper only smoke note.');
-  await page.click('#journalForm button');
-  await page.waitForSelector('#paperBroker');
-  await page.click('#brokerSetupCheck');
-  await page.waitForSelector('#persistenceEngine');
-  const result = await page.evaluate(() => ({
-    watchCount: document.getElementById('watchCount')?.textContent,
-    journalCount: document.getElementById('journalCount')?.textContent,
-    brokerWizard: Boolean(document.getElementById('brokerSetupOutput')?.textContent.includes('ALPACA_PAPER_KEY_ID')),
-    persistencePanel: Boolean(document.getElementById('persistenceEngine'))
-  }));
-  await browser.close();
-  if (errors.length) fail(`browser console errors: ${errors.join(' | ')}`);
-  if (result.watchCount !== '1') fail(`watchlist did not update in browser smoke: ${JSON.stringify(result)}`);
-  if (result.journalCount !== '1') fail(`journal did not update in browser smoke: ${JSON.stringify(result)}`);
-  if (!result.brokerWizard) fail('broker setup wizard did not render setup status');
-  if (!result.persistencePanel) fail('persistence panel did not render');
-  await page.screenshot({ path: resolve(artifactDir, 'browser-ui-smoke.png'), fullPage: true });
-  if (!process.exitCode) console.log('Playwright browser/UI smoke passed.');
-  if (!process.exitCode) pass('Playwright browser workflow updated watchlist, journal, paper setup wizard, and persistence panel');
+  try {
+    await page.goto(smokeServer.url, { waitUntil: 'domcontentloaded' });
+    await page.fill('#symbolInput', 'ETH');
+    await page.click('#watchForm button');
+    await page.fill('#journalTitle', 'Smoke note');
+    await page.fill('#journalText', 'Paper only smoke note.');
+    await page.click('#journalForm button');
+    await page.waitForSelector('#paperBroker');
+    await page.click('#brokerSetupCheck');
+    await page.waitForSelector('#persistenceEngine');
+    const result = await page.evaluate(() => ({
+      watchCount: document.getElementById('watchCount')?.textContent,
+      journalCount: document.getElementById('journalCount')?.textContent,
+      brokerWizard: Boolean(document.getElementById('brokerSetupOutput')?.textContent.includes('ALPACA_PAPER_KEY_ID')),
+      persistencePanel: Boolean(document.getElementById('persistenceEngine'))
+    }));
+    if (errors.length) fail(`browser console errors: ${errors.join(' | ')}`);
+    if (result.watchCount !== '1') fail(`watchlist did not update in browser smoke: ${JSON.stringify(result)}`);
+    if (result.journalCount !== '1') fail(`journal did not update in browser smoke: ${JSON.stringify(result)}`);
+    if (!result.brokerWizard) fail('broker setup wizard did not render setup status');
+    if (!result.persistencePanel) fail('persistence panel did not render');
+    await page.screenshot({ path: resolve(artifactDir, 'browser-ui-smoke.png'), fullPage: true });
+    if (!process.exitCode) console.log('Playwright browser/UI smoke passed.');
+    if (!process.exitCode) pass('Playwright browser workflow updated watchlist, journal, paper setup wizard, and persistence panel');
+  } finally {
+    await browser.close();
+    await smokeServer.close();
+  }
   return true;
 }
 
