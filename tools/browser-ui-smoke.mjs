@@ -180,6 +180,10 @@ async function tryPlaywrightSmoke() {
     await page.click('#journalForm button');
     await page.waitForSelector('#paperBroker');
     await page.click('#brokerSetupCheck');
+    await page.waitForFunction(() => {
+      const output = document.getElementById('brokerSetupOutput')?.textContent || '';
+      return output.includes('ALPACA_PAPER_KEY_ID') || output.includes('Paper setup check');
+    });
     await page.waitForSelector('#persistenceEngine');
     const result = await page.evaluate(() => ({
       watchCount: Number.parseInt(document.getElementById('watchCount')?.textContent || '0', 10),
