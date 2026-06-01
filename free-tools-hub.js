@@ -9,7 +9,7 @@
     ['Active','Browser localStorage','Storage','Local watchlist, journal, outcomes, playbooks','Live: browser memory'],
     ['Optional','OpenAI API support','AI','Server-side AI Coach Chat when key is added','Ready: add OPENAI_API_KEY in Vercel'],
 
-    ['Broker/Paper','Alpaca Paper Trading','Paper broker','Paper broker integration and simulated orders','Adapter planned/partly scaffolded'],
+    ['Broker/Paper','Alpaca Paper Trading','Paper broker','Paper-only broker setup wizard and explicit PAPER ONLY ticket','Live setup-ready paper adapter'],
     ['Broker/Paper','TradingView Paper Trading','Manual companion','Manual charting and practice','External manual companion'],
     ['Broker/Paper','Interactive Brokers Paper Trading','Paper broker','Advanced paper trading account','External account required'],
     ['Broker/Paper','QuantConnect Paper/Backtesting','Backtesting','Serious algo strategy research','External free tier / LEAN compatible'],
@@ -165,9 +165,9 @@
     section.id = 'freeToolsHub';
     section.className = 'panel';
     section.innerHTML = `
-      <span class="label">Full Free Tool Integration Hub</span>
-      <h3>Every suggested free/free-tier tool is now represented in the product plan</h3>
-      <p class="muted">This hub integrates the full tool universe as a governed connector registry. Tools that can run in this Vercel app are active or ready. Tools that require accounts, API keys, local installs, browser extensions, desktop apps, or external services are tracked as setup-ready adapters instead of being falsely marked live.</p>
+      <span class="label">Free Tool Setup Registry</span>
+      <h3>What is live, setup-ready, or external</h3>
+      <p class="muted">This registry separates working app features from tools that require accounts, API keys, local installs, browser extensions, desktop apps, or external services. It does not claim those external tools are connected until setup is complete.</p>
       <div class="hub-note"><strong>Rule:</strong> no hidden trades, no secret scraping, no fake integrations, no real-money execution without explicit adult/owner approval and configured broker credentials.</div>
       <div class="hub-controls"><input id="hubSearch" placeholder="Search tools, categories, status..." /><button id="hubExport" type="button">Export integration map</button></div>
       <div id="hubFilters" class="hub-filters"></div>
@@ -193,7 +193,7 @@
   }
 
   function exportMap() {
-    const data = { exportedAt: new Date().toISOString(), warning: 'Connector registry only. Some tools require accounts, keys, installs, or separate setup.', tools: tools.map(([category, name, type, use, status]) => ({ category, name, type, use, status })) };
+    const data = { exportedAt: new Date().toISOString(), warning: 'Setup registry only. Some tools require accounts, keys, installs, or separate setup before they are live.', tools: tools.map(([category, name, type, use, status]) => ({ category, name, type, use, status })) };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

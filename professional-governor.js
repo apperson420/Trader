@@ -99,7 +99,7 @@
     const panel = document.createElement('section');
     panel.id = 'proExecutivePanel';
     panel.className = 'panel';
-    panel.innerHTML = `<span class="label">$2000 Product Mode</span><h3>Professional command layer active</h3><p class="muted">The interface now prioritizes clean-screen use, safe scores, visible next steps, paper-only execution, and beginner coaching without blocking the dashboard.</p><div class="pro-grid"><span>UX governor active</span><span>Smart score capped by evidence</span><span>Coach/chat minimized by default</span><span>Autonomy remains paper-only</span></div>`;
+    panel.innerHTML = `<span class="label">Production command layer</span><h3>Clean-screen controls active</h3><p class="muted">The interface prioritizes clean-screen use, evidence-capped scores, visible next steps, paper-only execution, and beginner coaching without blocking the dashboard.</p><div class="pro-grid"><span>UX governor active</span><span>Smart score capped by evidence</span><span>Coach/chat minimized by default</span><span>Autonomy remains paper-only</span></div>`;
     hero.parentNode.insertBefore(panel, hero.nextSibling);
   }
 

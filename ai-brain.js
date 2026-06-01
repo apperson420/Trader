@@ -109,8 +109,8 @@
     section.className = 'grid two';
     section.innerHTML = `
       <article class="panel smart-panel">
-        <div class="section-head"><div><span class="label">Cross-Repo AI Brain</span><h3>Agent council from our AI repos</h3></div><strong id="aiMaturity">0%</strong></div>
-        <p class="muted">This imports the project patterns from SingularityOS, ProjectBrain, AetherForge, and IncomeOS: memory, safe autopilot, no-loss upgrades, beginner coaching, compliance guardrails, and visible approval gates.</p>
+        <div class="section-head"><div><span class="label">AI Brain</span><h3>Visible coach council from local evidence</h3></div><strong id="aiMaturity">0%</strong></div>
+        <p class="muted">This uses the app's own paper/research memory: watchlist, checklist, journal, outcomes, playbooks, safe autopilot notes, beginner coaching, compliance guardrails, and visible approval gates.</p>
         <div><span class="ai-chip">Project Brain memory</span><span class="ai-chip">Safe Autopilot</span><span class="ai-chip">Kid Coach</span><span class="ai-chip">Compliance Guard</span><span class="ai-chip">No hidden trades</span></div>
         <div id="aiBrainOutput" class="result-box stacked"></div>
         <div class="evo-actions"><button id="aiThink" type="button">Generate AI Next Step</button><button id="aiApprove" class="ai-approve" type="button">Approve for paper practice</button><button id="aiStart" type="button">Start AI Coach Loop</button><button id="aiStop" class="ai-stop" type="button">Stop AI Loop</button></div>

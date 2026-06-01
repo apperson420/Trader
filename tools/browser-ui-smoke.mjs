@@ -102,6 +102,8 @@ for (const file of requiredFiles) {
 const broker = readFileSync(resolve(root, 'paper-broker.js'), 'utf8');
 const brokerApi = readFileSync(resolve(root, 'api/alpaca-paper.js'), 'utf8');
 const persistence = readFileSync(resolve(root, 'persistence-engine.js'), 'utf8');
+const autonomy = readFileSync(resolve(root, 'autonomous-engine.js'), 'utf8');
+const hub = readFileSync(resolve(root, 'free-tools-hub.js'), 'utf8');
 
 const behaviorChecks = [
   ['Alpaca setup wizard visible', broker.includes('Paper setup wizard')],
@@ -109,7 +111,9 @@ const behaviorChecks = [
   ['Paper-only base URL enforced server-side', brokerApi.includes('isPaperBase') && brokerApi.includes('paper-api.alpaca.markets')],
   ['Full backup export present', persistence.includes('Export full backup JSON')],
   ['Backup import present', persistence.includes('Import backup JSON')],
-  ['Supabase fallback message present', persistence.includes('LocalStorage fallback is active')]
+  ['Supabase fallback message present', persistence.includes('LocalStorage fallback is active')],
+  ['Autonomy panel states current limits, not roadmap stages', autonomy.includes('Autonomy safety limits') && !autonomy.includes('Autonomy roadmap')],
+  ['Tool hub avoids fake live integration copy', hub.includes('What is live, setup-ready, or external') && !hub.includes('represented in the product plan')]
 ];
 
 for (const [label, ok] of behaviorChecks) {

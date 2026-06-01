@@ -47,12 +47,12 @@
         </div>
       </article>
       <article class="panel">
-        <div class="section-head"><div><span class="label">Autonomy roadmap</span><h3>How this becomes truly autonomous</h3></div></div>
+        <div class="section-head"><div><span class="label">Autonomy safety limits</span><h3>What this autopilot can and cannot do</h3></div></div>
         <div class="auto-steps">
-          <div><strong>Stage 1: Autonomous paper coach.</strong><p class="muted">Implemented now. It plans and journals practice ideas.</p></div>
-          <div><strong>Stage 2: Read-only market data.</strong><p class="muted">Future: connect safe public data APIs without keys in the browser.</p></div>
-          <div><strong>Stage 3: Paper broker integration.</strong><p class="muted">Future: paper account only, with logs and stop buttons.</p></div>
-          <div><strong>Stage 4: Real-money gate.</strong><p class="muted">Future: adult-owned account, legal compliance, tiny limits, explicit approval, and no secret actions.</p></div>
+          <div><strong>It can read local practice memory.</strong><p class="muted">Watchlist, checklist, paper outcomes, and journal notes help it choose the next practice step.</p></div>
+          <div><strong>It can create visible paper plans.</strong><p class="muted">Every cycle is shown in the audit trail and can be stopped from this panel.</p></div>
+          <div><strong>It can write journal notes only in journal mode.</strong><p class="muted">Use Generate and journal plans when you want the coach to save practice notes.</p></div>
+          <div><strong>It cannot place broker orders.</strong><p class="muted">Broker actions stay in the separate Alpaca paper panel with PAPER ONLY confirmation.</p></div>
         </div>
       </article>`;
     safety.parentNode.insertBefore(section, safety);
