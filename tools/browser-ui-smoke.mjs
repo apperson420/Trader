@@ -1,9 +1,18 @@
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const root = process.cwd();
+const artifactDir = resolve(root, 'artifacts', 'qa');
 const html = readFileSync(resolve(root, 'index.html'), 'utf8');
 const fileUrl = `file:///${resolve(root, 'index.html').replace(/\\/g, '/')}`;
+const report = {
+  name: 'browser-ui-smoke',
+  generatedAt: new Date().toISOString(),
+  mode: 'dependency-free-fallback',
+  checks: []
+};
+
+mkdirSync(artifactDir, { recursive: true });
 
 const requiredHtml = [
   ['persistence loader', './persistence-engine.js'],
@@ -22,7 +31,17 @@ const requiredFiles = [
 
 function fail(message) {
   console.error(`UI smoke failed: ${message}`);
+  report.checks.push({ ok: false, message });
   process.exitCode = 1;
+}
+
+function pass(message) {
+  console.log(`OK ${message}`);
+  report.checks.push({ ok: true, message });
+}
+
+function writeReport() {
+  writeFileSync(resolve(artifactDir, 'browser-ui-smoke.json'), JSON.stringify(report, null, 2));
 }
 
 async function tryPlaywrightSmoke() {
@@ -32,7 +51,15 @@ async function tryPlaywrightSmoke() {
   } catch {
     return false;
   }
-  const browser = await playwright.chromium.launch();
+  let browser;
+  try {
+    browser = await playwright.chromium.launch();
+  } catch (error) {
+    console.log(`Playwright is installed but Chromium could not start: ${error.message}`);
+    report.checks.push({ ok: true, message: `Playwright Chromium unavailable; dependency-free fallback used: ${error.message}` });
+    return false;
+  }
+  report.mode = 'playwright-chromium';
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
@@ -63,8 +90,9 @@ async function tryPlaywrightSmoke() {
   await page.fill('#journalTitle', 'Smoke note');
   await page.fill('#journalText', 'Paper only smoke note.');
   await page.click('#journalForm button');
-  await page.click('#brokerSetupCheck');
   await page.waitForSelector('#paperBroker');
+  await page.click('#brokerSetupCheck');
+  await page.waitForSelector('#persistenceEngine');
   const result = await page.evaluate(() => ({
     watchCount: document.getElementById('watchCount')?.textContent,
     journalCount: document.getElementById('journalCount')?.textContent,
@@ -77,12 +105,15 @@ async function tryPlaywrightSmoke() {
   if (result.journalCount !== '1') fail(`journal did not update in browser smoke: ${JSON.stringify(result)}`);
   if (!result.brokerWizard) fail('broker setup wizard did not render setup status');
   if (!result.persistencePanel) fail('persistence panel did not render');
+  await page.screenshot({ path: resolve(artifactDir, 'browser-ui-smoke.png'), fullPage: true });
   if (!process.exitCode) console.log('Playwright browser/UI smoke passed.');
+  if (!process.exitCode) pass('Playwright browser workflow updated watchlist, journal, paper setup wizard, and persistence panel');
   return true;
 }
 
 const usedBrowser = await tryPlaywrightSmoke();
 if (usedBrowser) {
+  writeReport();
   if (process.exitCode) process.exit(process.exitCode);
   process.exit(0);
 }
@@ -91,12 +122,12 @@ console.log('Playwright is not installed. Running dependency-free UI smoke fallb
 
 for (const [label, token] of requiredHtml) {
   if (!html.includes(token)) fail(`missing ${label}`);
-  else console.log(`OK UI shell: ${label}`);
+  else pass(`UI shell: ${label}`);
 }
 
 for (const file of requiredFiles) {
   if (!existsSync(resolve(root, file))) fail(`missing file ${file}`);
-  else console.log(`OK file exists: ${file}`);
+  else pass(`file exists: ${file}`);
 }
 
 const broker = readFileSync(resolve(root, 'paper-broker.js'), 'utf8');
@@ -118,8 +149,9 @@ const behaviorChecks = [
 
 for (const [label, ok] of behaviorChecks) {
   if (!ok) fail(label);
-  else console.log(`OK behavior: ${label}`);
+  else pass(`behavior: ${label}`);
 }
 
+writeReport();
 if (process.exitCode) process.exit(process.exitCode);
 console.log('Browser/UI smoke fallback passed. For real browser rendering, run this app with Playwright installed and inspect the page.');
