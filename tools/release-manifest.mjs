@@ -25,6 +25,7 @@ const manifest = {
     'Read-only market data',
     'Paper broker control center',
     'Professional chart engine',
+    'Supabase-ready persistence with localStorage fallback and full JSON backup',
     'Full free tools integration hub',
     '7-year-old beginner coach',
     'Audit logs and local memory export'

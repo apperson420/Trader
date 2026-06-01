@@ -1,4 +1,7 @@
-const store={get watchlist(){return JSON.parse(localStorage.getItem('trader_watchlist')||'[]')},set watchlist(v){localStorage.setItem('trader_watchlist',JSON.stringify(v))},get journal(){return JSON.parse(localStorage.getItem('trader_journal')||'[]')},set journal(v){localStorage.setItem('trader_journal',JSON.stringify(v))},get checks(){return JSON.parse(localStorage.getItem('trader_checks')||'[]')},set checks(v){localStorage.setItem('trader_checks',JSON.stringify(v))}};
+const persist=window.TraderPersistence;
+const readStore=(name,fallback=[])=>persist?persist.read(name,fallback):JSON.parse(localStorage.getItem(`trader_${name}`)||JSON.stringify(fallback));
+const writeStore=(name,value)=>persist?persist.write(name,value):localStorage.setItem(`trader_${name}`,JSON.stringify(value));
+const store={get watchlist(){return readStore('watchlist')},set watchlist(v){writeStore('watchlist',v)},get journal(){return readStore('journal')},set journal(v){writeStore('journal',v)},get checks(){return readStore('checks')},set checks(v){writeStore('checks',v)}};
 const $=(id)=>document.getElementById(id);
 const money=(n)=>new Intl.NumberFormat(undefined,{style:'currency',currency:'USD'}).format(Number.isFinite(n)?n:0);
 const clean=(v)=>String(v||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
@@ -21,5 +24,6 @@ $('runSmartReview').addEventListener('click',()=>updateSmartScore(true));
 $('tradeForm').addEventListener('submit',event=>{event.preventDefault();const p=planData();const verdict=p.rr>=2?'Strong paper setup':p.rr>=1?'Needs review':'Weak risk/reward';$('tradeOutput').innerHTML=`<div><span>${clean(p.symbol)} ${clean(p.direction)}</span><strong>${verdict}</strong><p>Reward/risk ratio: ${p.rr.toFixed(2)}R. This is a simulation only; no order was sent.</p></div>`;updateSmartScore(true)});
 $('journalForm').addEventListener('submit',event=>{event.preventDefault();const title=$('journalTitle').value.trim()||'Untitled note',text=$('journalText').value.trim();if(!text)return;store.journal=[...store.journal,{title,text,date:new Date().toLocaleString()}];$('journalTitle').value='';$('journalText').value='';renderJournal();updateCounts()});
 $('clearJournal').addEventListener('click',()=>{store.journal=[];renderJournal();updateCounts()});
+document.addEventListener('trader:persistence-restored',()=>{renderWatchlist();renderJournal();restoreChecklist();calculateRisk();updateCounts();updateSmartScore(false)});
 renderWatchlist();renderJournal();restoreChecklist();calculateRisk();updateCounts();updateSmartScore(true);
 ['autonomous-engine.js','ai-brain.js','market-intel.js','ai-chat.js','free-tools-hub.js','paper-broker.js','chart-engine.js','professional-governor.js','century-evolution.js','strategy-validation.js'].forEach(src=>{const s=document.createElement('script');s.src='./'+src;document.body.appendChild(s)});
