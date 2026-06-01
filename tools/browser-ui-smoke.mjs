@@ -162,6 +162,10 @@ async function tryPlaywrightSmoke() {
   page.on('console', (msg) => { if (msg.type() === 'error') errors.push(msg.text()); });
   try {
     await page.goto(smokeServer.url, { waitUntil: 'domcontentloaded' });
+    const before = await page.evaluate(() => ({
+      watchCount: Number.parseInt(document.getElementById('watchCount')?.textContent || '0', 10),
+      journalCount: Number.parseInt(document.getElementById('journalCount')?.textContent || '0', 10)
+    }));
     await page.fill('#symbolInput', 'ETH');
     await page.click('#watchForm button');
     await page.fill('#journalTitle', 'Smoke note');
@@ -171,14 +175,14 @@ async function tryPlaywrightSmoke() {
     await page.click('#brokerSetupCheck');
     await page.waitForSelector('#persistenceEngine');
     const result = await page.evaluate(() => ({
-      watchCount: document.getElementById('watchCount')?.textContent,
-      journalCount: document.getElementById('journalCount')?.textContent,
+      watchCount: Number.parseInt(document.getElementById('watchCount')?.textContent || '0', 10),
+      journalCount: Number.parseInt(document.getElementById('journalCount')?.textContent || '0', 10),
       brokerWizard: Boolean(document.getElementById('brokerSetupOutput')?.textContent.includes('ALPACA_PAPER_KEY_ID')),
       persistencePanel: Boolean(document.getElementById('persistenceEngine'))
     }));
     if (errors.length) fail(`browser console errors: ${errors.join(' | ')}`);
-    if (result.watchCount !== '1') fail(`watchlist did not update in browser smoke: ${JSON.stringify(result)}`);
-    if (result.journalCount !== '1') fail(`journal did not update in browser smoke: ${JSON.stringify(result)}`);
+    if (result.watchCount !== before.watchCount + 1) fail(`watchlist did not update in browser smoke: ${JSON.stringify({ before, result })}`);
+    if (result.journalCount !== before.journalCount + 1) fail(`journal did not update in browser smoke: ${JSON.stringify({ before, result })}`);
     if (!result.brokerWizard) fail('broker setup wizard did not render setup status');
     if (!result.persistencePanel) fail('persistence panel did not render');
     await page.screenshot({ path: resolve(artifactDir, 'browser-ui-smoke.png'), fullPage: true });
