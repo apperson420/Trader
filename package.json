@@ -7,6 +7,8 @@
   "scripts": {
     "test": "node tools/check-syntax.mjs",
     "test:syntax": "node tools/check-syntax.mjs",
+    "test:ui": "node tools/browser-ui-smoke.mjs",
+    "qa:fallback": "powershell -ExecutionPolicy Bypass -File tools/qa-fallback.ps1",
     "test:smoke": "node tools/smoke-live.mjs",
     "release:manifest": "node tools/release-manifest.mjs"
   },

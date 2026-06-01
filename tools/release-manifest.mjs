@@ -24,6 +24,8 @@ const manifest = {
     'Scenario Lab',
     'Read-only market data',
     'Paper broker control center',
+    'Alpaca paper setup wizard with server-side environment checks',
+    'Browser/UI smoke fallback for npm-missing QA',
     'Professional chart engine',
     'Supabase-ready persistence with localStorage fallback and full JSON backup',
     'Full free tools integration hub',

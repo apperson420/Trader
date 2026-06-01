@@ -19,6 +19,36 @@ function cfg() {
   };
 }
 
+function isPaperBase(base) {
+  try {
+    const host = new URL(base).hostname.toLowerCase();
+    return host === 'paper-api.alpaca.markets';
+  } catch {
+    return false;
+  }
+}
+
+function setupStatus() {
+  const c = cfg();
+  const hasKey = Boolean(c.key);
+  const hasSecret = Boolean(c.secret);
+  const paperBase = isPaperBase(c.base);
+  return {
+    configured: hasKey && hasSecret && paperBase,
+    ok: hasKey && hasSecret && paperBase,
+    paperOnly: true,
+    checks: {
+      ALPACA_PAPER_KEY_ID: hasKey,
+      ALPACA_PAPER_SECRET_KEY: hasSecret,
+      ALPACA_PAPER_BASE_URL: paperBase
+    },
+    baseHost: (() => { try { return new URL(c.base).hostname; } catch { return 'invalid-url'; } })(),
+    message: hasKey && hasSecret && paperBase
+      ? 'Alpaca paper environment variables are present and the base URL is paper-only.'
+      : 'Add ALPACA_PAPER_KEY_ID and ALPACA_PAPER_SECRET_KEY in Vercel. Keep ALPACA_PAPER_BASE_URL set to https://paper-api.alpaca.markets or leave it blank.'
+  };
+}
+
 function headers(c) {
   return {
     'accept': 'application/json',
@@ -34,6 +64,14 @@ function cleanSymbol(value) {
 
 async function alpaca(path, options = {}) {
   const c = cfg();
+  if (!isPaperBase(c.base)) {
+    return {
+      configured: false,
+      ok: false,
+      paperOnly: true,
+      message: 'Safety stop: ALPACA_PAPER_BASE_URL must be https://paper-api.alpaca.markets. No real-money broker endpoint was contacted.'
+    };
+  }
   if (!c.key || !c.secret) {
     return {
       configured: false,
@@ -56,6 +94,9 @@ function validTimeInForce(tif) { return ['day', 'gtc'].includes(String(tif || ''
 export default async function handler(req, res) {
   try {
     const action = String(req.query.action || 'status');
+    if (action === 'setup-status') {
+      return json(res, 200, { ...setupStatus(), mode: 'alpaca_paper_setup_status' });
+    }
     if (action === 'status') {
       const account = await alpaca('/v2/account');
       return json(res, 200, account.configured ? { ...account, mode: 'alpaca_paper_status' } : account);

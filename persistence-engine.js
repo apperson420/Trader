@@ -11,6 +11,7 @@
     ['playbooks', []],
     ['ai_plans', []],
     ['broker_logs', []],
+    ['broker_setup_checks', []],
     ['validation_report', null],
     ['real_strategy_evolution', null],
     ['chart_last', null],

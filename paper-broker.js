@@ -5,7 +5,7 @@
   const money = (n) => new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(Number.isFinite(Number(n)) ? Number(n) : 0);
 
   const style = document.createElement('style');
-  style.textContent = `.broker-card{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.055);border-radius:16px;padding:12px;margin-top:10px}.broker-card strong{color:#4cc9f0}.broker-good{border-left:4px solid #34d399}.broker-warn{border-left:4px solid #fbbf24}.broker-danger{border-left:4px solid #f87171}.broker-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}.broker-row span{border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:9px;background:rgba(0,0,0,.15);color:#c7d4e5}.broker-pill{display:inline-flex;border:1px solid rgba(167,243,208,.35);background:rgba(167,243,208,.1);color:#a7f3d0;border-radius:999px;padding:6px 9px;margin:3px;font-weight:900;font-size:12px}.broker-lock{border-left:4px solid #f87171;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.045);color:#d7e2f0}.broker-small{font-size:13px;color:#c7d4e5}@media(max-width:860px){.broker-row{grid-template-columns:1fr}}`;
+  style.textContent = `.broker-card{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.055);border-radius:16px;padding:12px;margin-top:10px}.broker-card strong{color:#4cc9f0}.broker-good{border-left:4px solid #34d399}.broker-warn{border-left:4px solid #fbbf24}.broker-danger{border-left:4px solid #f87171}.broker-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}.broker-row span{border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:9px;background:rgba(0,0,0,.15);color:#c7d4e5}.broker-pill{display:inline-flex;border:1px solid rgba(167,243,208,.35);background:rgba(167,243,208,.1);color:#a7f3d0;border-radius:999px;padding:6px 9px;margin:3px;font-weight:900;font-size:12px}.broker-lock{border-left:4px solid #f87171;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.045);color:#d7e2f0}.broker-small{font-size:13px;color:#c7d4e5}.broker-setup-grid{display:grid;gap:10px}.broker-step{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.045);border-radius:14px;padding:10px}.broker-step input{width:auto;margin-top:4px}.broker-code{font-family:Consolas,monospace;color:#a7f3d0}.broker-status-list{display:grid;gap:8px;margin-top:10px}.broker-status-list span{display:block;border-radius:12px;padding:8px 10px;background:rgba(0,0,0,.16);color:#d7e2f0}@media(max-width:860px){.broker-row{grid-template-columns:1fr}}`;
   document.head.appendChild(style);
 
   async function api(action, payload) {
@@ -44,14 +44,17 @@
         <p class="broker-small">This is not investment advice. A paper fill does not prove a strategy works. Keep using Smart Analyst, Scenario Lab, journal, and Evolution Engine.</p>
       </article>
       <article class="panel">
-        <div class="section-head"><div><span class="label">Broker setup coach</span><h3>Exactly what to configure</h3></div></div>
-        <div class="auto-steps">
-          <div><strong>1. Create an Alpaca paper account.</strong><p class="muted">Use paper trading only. Do not connect a real-money account yet.</p></div>
-          <div><strong>2. Add Vercel environment variables.</strong><p class="muted">Add ALPACA_PAPER_KEY_ID and ALPACA_PAPER_SECRET_KEY. Optional: ALPACA_PAPER_BASE_URL=https://paper-api.alpaca.markets.</p></div>
-          <div><strong>3. Redeploy Vercel.</strong><p class="muted">After adding keys, redeploy so serverless functions can read them.</p></div>
-          <div><strong>4. Press Check paper account.</strong><p class="muted">Only continue if the app says paper mode is configured.</p></div>
-          <div><strong>5. Practice tiny paper orders.</strong><p class="muted">Use 1 share / tiny size, record every result, and keep real money locked.</p></div>
+        <div class="section-head"><div><span class="label">Paper setup wizard</span><h3>Connect Alpaca safely</h3></div><strong id="brokerSetupGrade">Not checked</strong></div>
+        <div class="broker-lock"><strong>Never paste keys here.</strong> Add keys only in Vercel Environment Variables. This browser can check setup status, but it cannot see your secrets.</div>
+        <div class="broker-setup-grid">
+          <label class="broker-step"><input class="brokerSetupCheck" type="checkbox" value="account"><span><strong>1. Create an Alpaca paper account.</strong><p class="muted">Choose paper trading only. Do not connect a real-money account for this app.</p></span></label>
+          <label class="broker-step"><input class="brokerSetupCheck" type="checkbox" value="env"><span><strong>2. Add server-side Vercel variables.</strong><p class="muted"><span class="broker-code">ALPACA_PAPER_KEY_ID</span> and <span class="broker-code">ALPACA_PAPER_SECRET_KEY</span>. Optional base URL must be <span class="broker-code">https://paper-api.alpaca.markets</span>.</p></span></label>
+          <label class="broker-step"><input class="brokerSetupCheck" type="checkbox" value="redeploy"><span><strong>3. Redeploy Vercel.</strong><p class="muted">Redeploy after adding variables so the serverless paper endpoint can read them.</p></span></label>
+          <label class="broker-step"><input class="brokerSetupCheck" type="checkbox" value="status"><span><strong>4. Run the setup check.</strong><p class="muted">The app should report paper-only keys present before any paper order ticket is used.</p></span></label>
+          <label class="broker-step"><input class="brokerSetupCheck" type="checkbox" value="practice"><span><strong>5. Practice tiny paper orders.</strong><p class="muted">Use tiny size, explicit PAPER ONLY confirmation, and journal every result. No real-money order is sent.</p></span></label>
         </div>
+        <div class="evo-actions"><button id="brokerSetupCheck" type="button">Run setup check</button><button id="brokerSetupReset" class="ghost" type="button">Reset checklist</button></div>
+        <div id="brokerSetupOutput" class="broker-status-list"></div>
       </article>
       <article class="panel">
         <div class="section-head"><div><span class="label">Paper broker audit</span><h3>Visible record</h3></div><button id="brokerClear" class="ghost" type="button">Clear</button></div>
@@ -64,6 +67,51 @@
     const logs = get('broker_logs');
     set('broker_logs', [...logs, { kind, payload, time: new Date().toLocaleString() }].slice(-80));
     renderLog();
+  }
+
+  function setupChecks() {
+    return new Set(get('broker_setup_checks'));
+  }
+
+  function saveSetupChecks() {
+    const values = Array.from(document.querySelectorAll('.brokerSetupCheck:checked')).map((box) => box.value);
+    set('broker_setup_checks', values);
+    renderSetupGrade();
+  }
+
+  function renderSetupGrade() {
+    const checked = setupChecks();
+    const grade = document.getElementById('brokerSetupGrade');
+    if (grade) grade.textContent = `${checked.size}/5 done`;
+  }
+
+  function restoreSetupChecks() {
+    const checked = setupChecks();
+    document.querySelectorAll('.brokerSetupCheck').forEach((box) => {
+      box.checked = checked.has(box.value);
+      box.addEventListener('change', saveSetupChecks);
+    });
+    renderSetupGrade();
+  }
+
+  function renderSetupStatus(result) {
+    const out = document.getElementById('brokerSetupOutput');
+    if (!out) return;
+    const checks = result.checks || {};
+    out.innerHTML = [
+      `<span>${checks.ALPACA_PAPER_KEY_ID ? 'Ready' : 'Missing'}: ALPACA_PAPER_KEY_ID on the server</span>`,
+      `<span>${checks.ALPACA_PAPER_SECRET_KEY ? 'Ready' : 'Missing'}: ALPACA_PAPER_SECRET_KEY on the server</span>`,
+      `<span>${checks.ALPACA_PAPER_BASE_URL ? 'Ready' : 'Blocked'}: paper-only base URL (${esc(result.baseHost || 'not checked')})</span>`,
+      `<span>${esc(result.message || 'Setup checked safely.')}</span>`
+    ].join('');
+    if (result.ok) {
+      const checked = setupChecks();
+      checked.add('status');
+      set('broker_setup_checks', [...checked]);
+      document.querySelectorAll('.brokerSetupCheck').forEach((box) => { box.checked = checked.has(box.value); });
+      renderSetupGrade();
+    }
+    record('Paper setup check', result);
   }
 
   function renderLog() {
@@ -120,6 +168,9 @@
   document.getElementById('brokerOrders').addEventListener('click', () => check('orders', 'Open paper orders'));
   document.getElementById('paperOrderForm').addEventListener('submit', submitOrder);
   document.getElementById('brokerClear').addEventListener('click', () => { set('broker_logs', []); renderLog(); });
+  document.getElementById('brokerSetupCheck').addEventListener('click', async () => renderSetupStatus(await api('setup-status')));
+  document.getElementById('brokerSetupReset').addEventListener('click', () => { set('broker_setup_checks', []); restoreSetupChecks(); document.getElementById('brokerSetupOutput').innerHTML = '<span>Setup checklist reset. Paper trading remains locked until setup is checked again.</span>'; });
+  restoreSetupChecks();
   renderLog();
   check('status', 'Paper account status');
 })();
