@@ -162,6 +162,13 @@ async function tryPlaywrightSmoke() {
   page.on('console', (msg) => { if (msg.type() === 'error') errors.push(msg.text()); });
   try {
     await page.goto(smokeServer.url, { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => {
+      const watchlist = document.getElementById('watchlist');
+      const journal = document.getElementById('journalList');
+      return Boolean(watchlist?.textContent.trim() && journal?.textContent.trim());
+    });
+    await page.click('#clearWatchlist');
+    await page.click('#clearJournal');
     const before = await page.evaluate(() => ({
       watchCount: Number.parseInt(document.getElementById('watchCount')?.textContent || '0', 10),
       journalCount: Number.parseInt(document.getElementById('journalCount')?.textContent || '0', 10)
