@@ -15,11 +15,24 @@ function yesNo(value) {
     return value ? 'Yes' : 'No';
 }
 
+function updateAckBanner(strategyAck) {
+    const banner = document.getElementById('strategyAckBanner');
+    if (!banner) return;
+    banner.className = `ack-banner ${strategyAck.status || 'unknown'}`;
+}
+
 function renderStatus(payload) {
     const state = payload.state || {};
     const runtime = payload.runtime || state.runtime || {};
     const risk = payload.risk || {};
     const strategy = payload.strategy || state.strategy || 'auto';
+    const strategyAck = payload.strategy_ack || {
+        label: 'Unknown',
+        detail: 'Strategy acknowledgement status is unavailable.',
+        status: 'unknown',
+        requested_strategy: strategy,
+        applied_strategy: runtime.bot_strategy || 'none'
+    };
 
     setText('activeStrategy', titleCaseStrategy(strategy));
     setText('runtimeStatus', payload.status || state.status || 'ready');
@@ -33,6 +46,12 @@ function renderStatus(payload) {
     setText('botStrategy', titleCaseStrategy(runtime.bot_strategy || 'auto'));
     setText('botHeartbeat', runtime.last_heartbeat_at || 'not started');
     setText('maxRisk', `${risk.max_risk_per_trade_percent || 1}%`);
+    setText('strategyAckStatus', strategyAck.label || 'Unknown');
+    setText('strategyAckLabel', strategyAck.label || 'Unknown');
+    setText('strategyAckDetail', strategyAck.detail || 'Strategy acknowledgement status is unavailable.');
+    setText('requestedStrategy', titleCaseStrategy(strategyAck.requested_strategy || strategy));
+    setText('appliedStrategy', titleCaseStrategy(strategyAck.applied_strategy || 'none'));
+    updateAckBanner(strategyAck);
 
     document.querySelectorAll('[data-strategy]').forEach(button => {
         button.classList.toggle('active', button.dataset.strategy === strategy);
@@ -68,14 +87,15 @@ async function switchStrategy(strategy) {
             strategy: result.new_strategy,
             state: result.state,
             runtime: result.runtime,
+            strategy_ack: result.strategy_ack,
             status: result.state.status,
             message: result.message,
             risk: { mode: result.state.mode || 'paper', max_risk_per_trade_percent: 1 }
         });
 
         if (resultBox) {
-            resultBox.textContent = result.message;
-            resultBox.className = 'result-box success';
+            resultBox.textContent = result.strategy_ack?.detail || result.message;
+            resultBox.className = result.pending_bot_ack ? 'result-box pending' : 'result-box success';
         }
     } catch (error) {
         if (resultBox) {
