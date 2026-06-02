@@ -1,0 +1,32 @@
+{
+  "version": "1.4",
+  "project": "BTC Sovereign",
+  "mode": "paper",
+  "default_strategy": "auto",
+  "allowed_strategies": [
+    "auto",
+    "trend",
+    "mean_reversion",
+    "breakout",
+    "momentum"
+  ],
+  "dashboard": {
+    "host": "127.0.0.1",
+    "port": 5055,
+    "sse_enabled": true
+  },
+  "runtime": {
+    "strategy_poll_seconds": 1.0,
+    "requires_approval_for_real_trades": true,
+    "real_money_trading_enabled": false
+  },
+  "risk": {
+    "paper_first": true,
+    "max_risk_per_trade_percent": 1.0,
+    "show_fees_slippage_and_tax_notes": true
+  },
+  "audit": {
+    "strategy_events_file": "logs/strategy_events.jsonl",
+    "redact_secrets": true
+  }
+}
