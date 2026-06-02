@@ -25,6 +25,10 @@
         <div>
           <span class="badge">System Overview</span>
           <h2>Current strategy: <span id="activeStrategy">{{ payload.strategy }}</span></h2>
+          <div id="strategyAckBanner" class="ack-banner {{ payload.strategy_ack.status }}">
+            <strong id="strategyAckLabel">{{ payload.strategy_ack.label }}</strong>
+            <span id="strategyAckDetail">{{ payload.strategy_ack.detail }}</span>
+          </div>
           <p>
             Dashboard strategy switches are written to the shared state file. A running SovereignBot launched with
             <code>python run.py all</code> or <code>python run.py bot</code> applies the latest selection automatically.
@@ -32,7 +36,7 @@
         </div>
         <div class="overview-grid">
           <article><span>Mode</span><strong id="paperMode">{{ payload.risk.mode }}</strong></article>
-          <article><span>Live Trading</span><strong>Disabled</strong></article>
+          <article><span>Strategy Sync</span><strong id="strategyAckStatus">{{ payload.strategy_ack.label }}</strong></article>
           <article><span>Bot Running</span><strong id="botRunning">{{ payload.runtime.bot_running }}</strong></article>
           <article><span>State Version</span><strong id="stateVersion">{{ payload.state.version }}</strong></article>
         </div>
@@ -93,6 +97,8 @@
           <div class="sync-table">
             <div><span>Updated by</span><strong id="updatedBy">{{ payload.state.updated_by }}</strong></div>
             <div><span>Previous strategy</span><strong id="previousStrategy">{{ payload.state.previous_strategy or 'none' }}</strong></div>
+            <div><span>Requested</span><strong id="requestedStrategy">{{ payload.strategy_ack.requested_strategy }}</strong></div>
+            <div><span>Applied</span><strong id="appliedStrategy">{{ payload.strategy_ack.applied_strategy or 'none' }}</strong></div>
             <div><span>Bot strategy</span><strong id="botStrategy">{{ payload.runtime.bot_strategy }}</strong></div>
             <div><span>Heartbeat</span><strong id="botHeartbeat">{{ payload.runtime.last_heartbeat_at or 'not started' }}</strong></div>
             <div><span>State file</span><strong id="stateFile">{{ payload.risk.state_file }}</strong></div>
