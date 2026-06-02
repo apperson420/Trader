@@ -11,6 +11,24 @@ async function body(req) {
   try { return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'); } catch { return {}; }
 }
 
+function ownerCode() {
+  return String(process.env.TRADER_OWNER_ACCESS_CODE || '').trim();
+}
+
+function ownerVerified(req) {
+  const required = Boolean(ownerCode());
+  const provided = String(req.headers['x-trader-owner-code'] || '').trim();
+  return { required, verified: !required || provided === ownerCode() };
+}
+
+function ownerBlock(req) {
+  const owner = ownerVerified(req);
+  if (owner.required && !owner.verified) {
+    return { ok: false, configured: false, paperOnly: true, ownerAccessRequired: true, ownerAccessVerified: false, message: 'Owner access code required before paper broker setup/status/order endpoints can be used.' };
+  }
+  return null;
+}
+
 function cfg() {
   return {
     key: process.env.ALPACA_PAPER_KEY_ID || process.env.ALPACA_KEY_ID || '',
@@ -28,24 +46,30 @@ function isPaperBase(base) {
   }
 }
 
-function setupStatus() {
+function setupStatus(req) {
   const c = cfg();
+  const owner = ownerVerified(req);
   const hasKey = Boolean(c.key);
   const hasSecret = Boolean(c.secret);
   const paperBase = isPaperBase(c.base);
   return {
-    configured: hasKey && hasSecret && paperBase,
-    ok: hasKey && hasSecret && paperBase,
+    configured: owner.verified && hasKey && hasSecret && paperBase,
+    ok: owner.verified && hasKey && hasSecret && paperBase,
     paperOnly: true,
+    ownerAccessRequired: owner.required,
+    ownerAccessVerified: owner.verified,
     checks: {
+      OWNER_ACCESS: owner.verified,
       ALPACA_PAPER_KEY_ID: hasKey,
       ALPACA_PAPER_SECRET_KEY: hasSecret,
       ALPACA_PAPER_BASE_URL: paperBase
     },
     baseHost: (() => { try { return new URL(c.base).hostname; } catch { return 'invalid-url'; } })(),
-    message: hasKey && hasSecret && paperBase
-      ? 'Alpaca paper environment variables are present and the base URL is paper-only.'
-      : 'Add ALPACA_PAPER_KEY_ID and ALPACA_PAPER_SECRET_KEY in Vercel. Keep ALPACA_PAPER_BASE_URL set to https://paper-api.alpaca.markets or leave it blank.'
+    message: !owner.verified
+      ? 'Owner access code required before paper broker checks can use server-side broker configuration.'
+      : hasKey && hasSecret && paperBase
+        ? 'Alpaca paper environment variables are present and the base URL is paper-only.'
+        : 'Add ALPACA_PAPER_KEY_ID and ALPACA_PAPER_SECRET_KEY in Vercel. Keep ALPACA_PAPER_BASE_URL set to https://paper-api.alpaca.markets or leave it blank.'
   };
 }
 
@@ -95,11 +119,14 @@ export default async function handler(req, res) {
   try {
     const action = String(req.query.action || 'status');
     if (action === 'setup-status') {
-      return json(res, 200, { ...setupStatus(), mode: 'alpaca_paper_setup_status' });
+      return json(res, 200, { ...setupStatus(req), mode: 'alpaca_paper_setup_status' });
     }
+    const blocked = ownerBlock(req);
+    if (blocked) return json(res, 200, blocked);
     if (action === 'status') {
       const account = await alpaca('/v2/account');
-      return json(res, 200, account.configured ? { ...account, mode: 'alpaca_paper_status' } : account);
+      const owner = ownerVerified(req);
+      return json(res, 200, account.configured ? { ...account, ownerAccessRequired: owner.required, ownerAccessVerified: owner.verified, mode: 'alpaca_paper_status' } : { ...account, ownerAccessRequired: owner.required, ownerAccessVerified: owner.verified });
     }
     if (action === 'orders') {
       const orders = await alpaca('/v2/orders?status=open&limit=20&nested=true');
