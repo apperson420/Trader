@@ -11,13 +11,23 @@ async function body(req) {
   try { return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'); } catch { return {}; }
 }
 
+function listEnv(name) {
+  return String(process.env[name] || '')
+    .split(',')
+    .map((item) => item.trim().toUpperCase().replace(/[^A-Z0-9.\-]/g, ''))
+    .filter(Boolean)
+    .slice(0, 200);
+}
+
 function cfg() {
   return {
     enabled: process.env.TRADER_ENABLE_LIVE_TRADING === 'I_UNDERSTAND_LIVE_TRADING_RISK',
+    killSwitch: process.env.TRADER_LIVE_KILL_SWITCH === 'LOCK_LIVE_TRADING',
     key: process.env.ALPACA_LIVE_KEY_ID || '',
     secret: process.env.ALPACA_LIVE_SECRET_KEY || '',
     base: process.env.ALPACA_LIVE_BASE_URL || 'https://api.alpaca.markets',
-    maxNotional: Number(process.env.TRADER_LIVE_MAX_NOTIONAL || 0)
+    maxNotional: Number(process.env.TRADER_LIVE_MAX_NOTIONAL || 0),
+    allowedSymbols: listEnv('TRADER_LIVE_ALLOWED_SYMBOLS')
   };
 }
 
@@ -34,31 +44,44 @@ function baseHost(base) {
   try { return new URL(base).hostname; } catch { return 'invalid-url'; }
 }
 
+function symbolAllowed(symbol, c = cfg()) {
+  return !c.allowedSymbols.length || c.allowedSymbols.includes(symbol);
+}
+
 function setupStatus() {
   const c = cfg();
   const hasKey = Boolean(c.key);
   const hasSecret = Boolean(c.secret);
   const liveBase = isLiveBase(c.base);
   const hasLimit = Number.isFinite(c.maxNotional) && c.maxNotional > 0;
-  const configured = c.enabled && hasKey && hasSecret && liveBase && hasLimit;
+  const configured = c.enabled && !c.killSwitch && hasKey && hasSecret && liveBase && hasLimit;
   return {
     ok: configured,
     configured,
     liveTrading: true,
     autonomousLiveTrading: false,
     manualOnly: true,
+    orderTypesAllowed: ['limit'],
+    timeInForceAllowed: ['day'],
     checks: {
       TRADER_ENABLE_LIVE_TRADING: c.enabled,
+      TRADER_LIVE_KILL_SWITCH: !c.killSwitch,
       ALPACA_LIVE_KEY_ID: hasKey,
       ALPACA_LIVE_SECRET_KEY: hasSecret,
       ALPACA_LIVE_BASE_URL: liveBase,
-      TRADER_LIVE_MAX_NOTIONAL: hasLimit
+      TRADER_LIVE_MAX_NOTIONAL: hasLimit,
+      TRADER_LIVE_ALLOWED_SYMBOLS: c.allowedSymbols.length ? true : 'not_set_all_symbols_allowed'
     },
     baseHost: baseHost(c.base),
     maxNotional: hasLimit ? c.maxNotional : 0,
+    allowedSymbolsConfigured: c.allowedSymbols.length > 0,
+    allowedSymbols: c.allowedSymbols,
+    killSwitchLocked: c.killSwitch,
     message: configured
       ? 'Live trading is unlocked for manual limit-day tickets only. AI/autopilot cannot place live orders.'
-      : 'Live trading is locked. To unlock, set server-side Vercel variables and a small TRADER_LIVE_MAX_NOTIONAL. Do not put live keys in browser code.'
+      : c.killSwitch
+        ? 'Live trading is locked by TRADER_LIVE_KILL_SWITCH. Remove or change it only when you intentionally want live readiness unlocked.'
+        : 'Live trading is locked. To unlock, set server-side Vercel variables, keep the kill switch off, and use a small TRADER_LIVE_MAX_NOTIONAL. Do not put live keys in browser code.'
   };
 }
 
@@ -84,6 +107,7 @@ function disabled(message, extra = {}) {
 
 async function alpaca(path, options = {}) {
   const c = cfg();
+  if (c.killSwitch) return disabled('Live trading is locked by TRADER_LIVE_KILL_SWITCH. No broker endpoint was contacted.');
   if (!c.enabled) return disabled('Live trading is locked. Set TRADER_ENABLE_LIVE_TRADING=I_UNDERSTAND_LIVE_TRADING_RISK server-side to unlock.');
   if (!isLiveBase(c.base)) return disabled('Safety stop: ALPACA_LIVE_BASE_URL must be https://api.alpaca.markets. No broker endpoint was contacted.', { baseHost: baseHost(c.base) });
   if (!c.key || !c.secret) return disabled('Add ALPACA_LIVE_KEY_ID and ALPACA_LIVE_SECRET_KEY in Vercel Environment Variables, then redeploy.');
@@ -132,6 +156,8 @@ export default async function handler(req, res) {
         return json(res, 200, disabled('Invalid live order. Only manual limit-day buy/sell tickets with positive quantity and limit price are allowed.'));
       }
       const c = cfg();
+      if (c.killSwitch) return json(res, 200, disabled('Live order blocked by TRADER_LIVE_KILL_SWITCH.'));
+      if (!symbolAllowed(symbol, c)) return json(res, 200, disabled('Live order blocked by TRADER_LIVE_ALLOWED_SYMBOLS allowlist.', { symbol, allowedSymbolsConfigured: true }));
       const estimatedNotional = qty * limit_price;
       if (!Number.isFinite(c.maxNotional) || c.maxNotional <= 0 || estimatedNotional > c.maxNotional) {
         return json(res, 200, disabled(`Live order blocked by notional cap. Estimated ${estimatedNotional.toFixed(2)} exceeds TRADER_LIVE_MAX_NOTIONAL ${Number(c.maxNotional || 0).toFixed(2)}.`));
