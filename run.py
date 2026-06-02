@@ -1,4 +1,4 @@
-# BTC Sovereign v1.4 - Unified Launcher
+# BTC Sovereign v1.7 - Unified Launcher
 """
 Beginner-friendly launcher.
 
@@ -14,10 +14,11 @@ from __future__ import annotations
 import argparse
 import json
 import threading
+import time
 from typing import Any, Dict
 
 import shared_state
-from sovereign_bot import SovereignBot, load_config
+from sovereign_bot import SovereignBot, load_config, logger
 from web_dashboard.app import app as dashboard_app
 
 
@@ -30,7 +31,8 @@ def run_dashboard(config: Dict[str, Any]) -> None:
     host = dashboard.get("host", "127.0.0.1")
     port = int(dashboard.get("port", 5055))
     print(f"BTC Sovereign dashboard: http://{host}:{port}")
-    dashboard_app.run(host=host, port=port, debug=False, threaded=True)
+    logger.info("Dashboard starting at http://%s:%s", host, port)
+    dashboard_app.run(host=host, port=port, debug=False, threaded=True, use_reloader=False)
 
 
 def run_bot(config: Dict[str, Any]) -> None:
@@ -41,8 +43,10 @@ def run_bot(config: Dict[str, Any]) -> None:
 
 
 def run_all(config: Dict[str, Any]) -> None:
-    thread = threading.Thread(target=run_bot, args=(config,), daemon=True)
+    thread = threading.Thread(target=run_bot, args=(config,), daemon=True, name="SovereignBotRuntime")
     thread.start()
+    logger.info("Started SovereignBot runtime thread from unified launcher.")
+    time.sleep(0.2)
     run_dashboard(config)
 
 
