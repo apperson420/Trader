@@ -3,7 +3,7 @@
   const LOG_KEY = 'live_broker_logs';
   const ACK_KEY = 'live_trading_acknowledged';
   const CONFIRMATION = 'LIVE ORDER - I ACCEPT REAL MONEY RISK';
-  const DEFAULT_SETUP = { checked: false, configured: false, maxNotional: 0, message: 'Setup has not been checked yet.' };
+  const DEFAULT_SETUP = { checked: false, configured: false, maxNotional: 0, message: 'Setup has not been checked yet.', killSwitchLocked: false, allowedSymbolsConfigured: false, allowedSymbols: [] };
   let setupState = { ...DEFAULT_SETUP };
   let accountState = { checked: false, configured: false, ok: false, data: null, message: 'Account has not been checked yet.' };
 
@@ -56,6 +56,8 @@
 
   function publicCheckLabel(key) {
     const text = String(key || '').toLowerCase();
+    if (text.includes('kill_switch')) return 'Emergency kill switch off';
+    if (text.includes('allowed_symbols')) return 'Optional symbol allowlist';
     if (text.includes('enable')) return 'Owner live-mode unlock';
     if (text.includes('key_id')) return 'Live broker key id on server';
     if (text.includes('secret')) return 'Live broker secret on server';
@@ -64,10 +66,23 @@
     return 'Server safety check';
   }
 
+  function publicCheckValue(key, value) {
+    const text = String(key || '').toLowerCase();
+    if (text.includes('allowed_symbols') && value === 'not_set_all_symbols_allowed') return 'not set - all symbols allowed';
+    if (text.includes('kill_switch')) return value ? 'OK' : 'LOCKED';
+    return value ? 'OK' : 'locked/missing';
+  }
+
   function renderSetup(data) {
     const out = document.getElementById('liveControlOutput');
-    const checks = Object.entries(data.checks || {}).map(([key, ok]) => `<span>${esc(publicCheckLabel(key))}: ${ok ? 'OK' : 'locked/missing'}</span>`).join('');
-    out.innerHTML = `<div class="live-control-note ${data.configured ? '' : 'live-control-bad'}"><strong>${data.configured ? 'Server live gate configured' : 'Server live gate locked'}</strong><p>${esc(data.message || 'No message returned.')}</p><div class="live-control-grid">${checks}</div><p class="muted">Server max-notional cap: ${money(data.maxNotional || 0)}</p></div>`;
+    const checks = Object.entries(data.checks || {}).map(([key, ok]) => `<span>${esc(publicCheckLabel(key))}: ${esc(publicCheckValue(key, ok))}</span>`).join('');
+    const allowlist = data.allowedSymbolsConfigured
+      ? `<p class="muted">Allowed live symbols: ${esc((data.allowedSymbols || []).join(', '))}</p>`
+      : '<p class="muted">Optional symbol allowlist is not set. The server still enforces the live unlock, kill switch, account check, manual ticket, and max-notional cap.</p>';
+    const kill = data.killSwitchLocked
+      ? '<p class="live-kill">Emergency kill switch is ON. Live order submission is locked.</p>'
+      : '<p class="live-ok">Emergency kill switch is OFF. Other live gates still apply.</p>';
+    out.innerHTML = `<div class="live-control-note ${data.configured ? '' : 'live-control-bad'}"><strong>${data.configured ? 'Server live gate configured' : 'Server live gate locked'}</strong><p>${esc(data.message || 'No message returned.')}</p><div class="live-control-grid">${checks}</div><p class="muted">Server max-notional cap: ${money(data.maxNotional || 0)}</p>${allowlist}${kill}</div>`;
   }
 
   async function checkStatus() {
@@ -75,9 +90,17 @@
     out.innerHTML = '<div class="live-control-note">Checking server-side live trading gate...</div>';
     try {
       const data = await liveApi('setup-status');
-      setupState = { checked: true, configured: Boolean(data.configured), maxNotional: Number(data.maxNotional || 0), message: data.message || '' };
+      setupState = {
+        checked: true,
+        configured: Boolean(data.configured),
+        maxNotional: Number(data.maxNotional || 0),
+        message: data.message || '',
+        killSwitchLocked: Boolean(data.killSwitchLocked),
+        allowedSymbolsConfigured: Boolean(data.allowedSymbolsConfigured),
+        allowedSymbols: Array.isArray(data.allowedSymbols) ? data.allowedSymbols : []
+      };
       renderSetup(data);
-      addLog('setup check', { configured: data.configured, maxNotional: data.maxNotional, message: data.message, checks: data.checks });
+      addLog('setup check', { configured: data.configured, maxNotional: data.maxNotional, killSwitchLocked: data.killSwitchLocked, allowedSymbolsConfigured: data.allowedSymbolsConfigured, message: data.message, checks: data.checks });
     } catch (error) {
       setupState = { ...DEFAULT_SETUP, checked: true, message: error.message || 'Setup check failed safely.' };
       out.innerHTML = `<div class="live-control-note live-control-bad">${esc(setupState.message)}</div>`;
@@ -139,6 +162,8 @@
     if (!Number.isFinite(values.qty) || values.qty <= 0) return 'Locked: quantity must be positive.';
     if (!Number.isFinite(values.limit) || values.limit <= 0) return 'Locked: limit price must be positive.';
     if (!setupState.checked) return 'Locked: run setup check first.';
+    if (setupState.killSwitchLocked) return 'Locked: emergency server kill switch is active.';
+    if (setupState.allowedSymbolsConfigured && !setupState.allowedSymbols.includes(values.symbol)) return 'Locked: symbol is not on the server allowlist.';
     if (!setupState.configured) return 'Locked: server live gate is not configured.';
     if (!accountState.checked) return 'Locked: check live account before submit.';
     if (!accountState.configured || !accountState.ok) return 'Locked: live account check did not pass.';
@@ -154,7 +179,10 @@
     if (!box) return;
     const under = cap > 0 && values.notional > 0 && values.notional <= cap;
     const over = cap > 0 && values.notional > cap;
-    box.innerHTML = `<div class="live-cap ${over ? 'live-cap-over' : under ? 'live-cap-under' : ''}"><span>Estimated notional</span><strong>${money(values.notional)}</strong><p>Server max-notional cap: ${cap > 0 ? money(cap) : 'not checked yet'}. ${over ? 'This ticket is over the cap and blocked.' : under ? 'This ticket is under the cap.' : 'Run setup check and enter quantity plus limit price.'}</p><p class="muted">Broker/account buying-power checks still apply.</p></div>`;
+    const allowText = setupState.allowedSymbolsConfigured
+      ? `Allowed symbols: ${setupState.allowedSymbols.join(', ') || 'none returned'}. ${values.symbol && !setupState.allowedSymbols.includes(values.symbol) ? 'This symbol is not allowed.' : ''}`
+      : 'No server symbol allowlist is set.';
+    box.innerHTML = `<div class="live-cap ${over ? 'live-cap-over' : under ? 'live-cap-under' : ''}"><span>Estimated notional</span><strong>${money(values.notional)}</strong><p>Server max-notional cap: ${cap > 0 ? money(cap) : 'not checked yet'}. ${over ? 'This ticket is over the cap and blocked.' : under ? 'This ticket is under the cap.' : 'Run setup check and enter quantity plus limit price.'}</p><p class="muted">${esc(allowText)}</p><p class="muted">Broker/account buying-power checks still apply.</p></div>`;
   }
 
   function updateTicketState() {
@@ -187,9 +215,12 @@
 
   function lockLiveMode(reason = 'Manual lock requested.') {
     setAcknowledged(false);
-    document.getElementById('liveTicketRiskAck').checked = false;
-    document.getElementById('liveTicketHumanReviewed').checked = false;
-    document.getElementById('liveTicketConfirm').value = '';
+    const risk = document.getElementById('liveTicketRiskAck');
+    const human = document.getElementById('liveTicketHumanReviewed');
+    const confirm = document.getElementById('liveTicketConfirm');
+    if (risk) risk.checked = false;
+    if (human) human.checked = false;
+    if (confirm) confirm.value = '';
     addLog('lock live mode', { reason });
     updateTicketState();
   }
@@ -206,7 +237,7 @@
     }
 
     const setup = await checkStatus();
-    if (!setup.configured || values.notional > setup.maxNotional) {
+    if (!setup.configured || values.notional > setup.maxNotional || setup.killSwitchLocked || (setup.allowedSymbolsConfigured && !setup.allowedSymbols.includes(values.symbol))) {
       addLog('blocked ticket', { reason: validationMessage(values), ticket: { symbol: values.symbol, qty: values.qty, side: values.side, limit: values.limit, notional: values.notional } });
       document.getElementById('liveTicketResponse').innerHTML = `<div class="live-control-note live-control-bad"><strong>Ticket blocked</strong><p>${esc(validationMessage(values))}</p></div>`;
       return;
@@ -255,6 +286,8 @@
       notInvestmentAdvice: true,
       autonomousLiveTradingAllowed: false,
       allowedFlow: 'manual-only, limit-only, day-only, human-reviewed, server-capped',
+      emergencyKillSwitch: 'TRADER_LIVE_KILL_SWITCH=LOCK_LIVE_TRADING locks live order submission',
+      optionalSymbolAllowlist: 'TRADER_LIVE_ALLOWED_SYMBOLS limits manual live tickets to specific symbols',
       confirmationRequired: CONFIRMATION,
       localAcknowledgement: acknowledged(),
       note: 'Use the broker directly for final review. This app must not choose trades or guarantee profit.'
@@ -282,9 +315,11 @@
       <div class="live-control-warning"><strong>Real money warning</strong><p>Real money can be lost. Nothing here is investment advice, no profit is guaranteed, and you must verify every action directly with your broker.</p></div>
       <div id="liveControlChecklist" class="persist-steps">
         <div><strong>1. Server-side unlock required.</strong><p class="muted">The owner must enable live mode in Vercel server settings. Without the exact server unlock, live mode remains locked.</p></div>
-        <div><strong>2. Live broker keys stay server-side.</strong><p class="muted">Live broker credentials belong only in Vercel environment variables. Never paste live secrets into this browser.</p></div>
-        <div><strong>3. Risk cap required.</strong><p class="muted">The server must have a small max-notional cap. The backend blocks requests above that cap.</p></div>
-        <div><strong>4. Manual-only final action.</strong><p class="muted">A human must review risk, broker status, account balance, order details, fees, and tax consequences.</p></div>
+        <div><strong>2. Emergency kill switch stays available.</strong><p class="muted">Set TRADER_LIVE_KILL_SWITCH=LOCK_LIVE_TRADING to immediately block live order submission without deleting broker keys.</p></div>
+        <div><strong>3. Optional symbol allowlist.</strong><p class="muted">Set TRADER_LIVE_ALLOWED_SYMBOLS to restrict manual live tickets to specific symbols.</p></div>
+        <div><strong>4. Live broker keys stay server-side.</strong><p class="muted">Live broker credentials belong only in Vercel environment variables. Never paste live secrets into this browser.</p></div>
+        <div><strong>5. Risk cap required.</strong><p class="muted">The server must have a small max-notional cap. The backend blocks requests above that cap.</p></div>
+        <div><strong>6. Manual-only final action.</strong><p class="muted">A human must review risk, broker status, account balance, order details, fees, and tax consequences.</p></div>
       </div>
       <div class="live-control-actions">
         <button id="liveControlStatus" type="button">Check live setup</button>
@@ -324,7 +359,7 @@
     else document.querySelector('.shell')?.appendChild(section);
 
     const style = document.createElement('style');
-    style.textContent = `.live-control-warning,.live-control-note,.live-ticket{border-left:4px solid #fbbf24;background:rgba(251,191,36,.08);border-radius:14px;padding:12px;margin:12px 0;color:#edf6ff}.live-ticket{border:1px solid rgba(251,191,36,.32);background:rgba(255,255,255,.04)}.live-control-bad{border-left-color:#f87171;background:rgba(248,113,113,.08)}.live-control-actions{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}.live-control-actions button{width:auto}.live-control-secondary{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#edf6ff}.live-control-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}.live-control-grid span,.live-cap{border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:10px;background:rgba(255,255,255,.055)}.live-control-ready{box-shadow:0 0 0 2px rgba(251,191,36,.25)}.live-check{display:grid;grid-template-columns:auto 1fr;align-items:center}.live-check input{width:auto}.live-cap strong{display:block;font-size:24px;margin:4px 0}.live-cap-under{border-left:4px solid #a7f3d0}.live-cap-over{border-left:4px solid #f87171}.live-response{white-space:pre-wrap;overflow:auto;max-height:360px;color:#d7e2f0}.live-ticket button:disabled{opacity:.45;cursor:not-allowed}@media(max-width:860px){.live-control-actions button{width:100%}.live-control-grid{grid-template-columns:1fr}}`;
+    style.textContent = `.live-control-warning,.live-control-note,.live-ticket{border-left:4px solid #fbbf24;background:rgba(251,191,36,.08);border-radius:14px;padding:12px;margin:12px 0;color:#edf6ff}.live-ticket{border:1px solid rgba(251,191,36,.32);background:rgba(255,255,255,.04)}.live-control-bad{border-left-color:#f87171;background:rgba(248,113,113,.08)}.live-ok{border-left:4px solid #a7f3d0;background:rgba(167,243,208,.08);border-radius:12px;padding:8px 10px}.live-kill{border-left:4px solid #f87171;background:rgba(248,113,113,.1);border-radius:12px;padding:8px 10px}.live-control-actions{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}.live-control-actions button{width:auto}.live-control-secondary{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#edf6ff}.live-control-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}.live-control-grid span,.live-cap{border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:10px;background:rgba(255,255,255,.055)}.live-control-ready{box-shadow:0 0 0 2px rgba(251,191,36,.25)}.live-check{display:grid;grid-template-columns:auto 1fr;align-items:center}.live-check input{width:auto}.live-cap strong{display:block;font-size:24px;margin:4px 0}.live-cap-under{border-left:4px solid #a7f3d0}.live-cap-over{border-left:4px solid #f87171}.live-response{white-space:pre-wrap;overflow:auto;max-height:360px;color:#d7e2f0}.live-ticket button:disabled{opacity:.45;cursor:not-allowed}@media(max-width:860px){.live-control-actions button{width:100%}.live-control-grid{grid-template-columns:1fr}}`;
     document.head.appendChild(style);
 
     document.getElementById('liveControlStatus').addEventListener('click', checkStatus);
