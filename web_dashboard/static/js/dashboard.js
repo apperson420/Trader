@@ -11,8 +11,14 @@ function setText(id, value) {
     }
 }
 
+function yesNo(value) {
+    return value ? 'Yes' : 'No';
+}
+
 function renderStatus(payload) {
     const state = payload.state || {};
+    const runtime = payload.runtime || state.runtime || {};
+    const risk = payload.risk || {};
     const strategy = payload.strategy || state.strategy || 'auto';
 
     setText('activeStrategy', titleCaseStrategy(strategy));
@@ -22,7 +28,11 @@ function renderStatus(payload) {
     setText('lastUpdated', state.updated_at || 'not switched yet');
     setText('updatedBy', state.updated_by || 'system');
     setText('previousStrategy', titleCaseStrategy(state.previous_strategy || 'none'));
-    setText('paperMode', (payload.risk && payload.risk.mode) || state.mode || 'paper');
+    setText('paperMode', risk.mode || state.mode || 'paper');
+    setText('botRunning', yesNo(runtime.bot_running));
+    setText('botStrategy', titleCaseStrategy(runtime.bot_strategy || 'auto'));
+    setText('botHeartbeat', runtime.last_heartbeat_at || 'not started');
+    setText('maxRisk', `${risk.max_risk_per_trade_percent || 1}%`);
 
     document.querySelectorAll('[data-strategy]').forEach(button => {
         button.classList.toggle('active', button.dataset.strategy === strategy);
@@ -57,9 +67,10 @@ async function switchStrategy(strategy) {
         renderStatus({
             strategy: result.new_strategy,
             state: result.state,
+            runtime: result.runtime,
             status: result.state.status,
             message: result.message,
-            risk: { mode: result.state.mode || 'paper' }
+            risk: { mode: result.state.mode || 'paper', max_risk_per_trade_percent: 1 }
         });
 
         if (resultBox) {
