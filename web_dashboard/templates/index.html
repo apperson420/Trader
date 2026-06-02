@@ -29,14 +29,18 @@
             <strong id="strategyAckLabel">{{ payload.strategy_ack.label }}</strong>
             <span id="strategyAckDetail">{{ payload.strategy_ack.detail }}</span>
           </div>
+          <div id="heartbeatBanner" class="ack-banner heartbeat-{{ payload.heartbeat.status }}">
+            <strong id="heartbeatLabel">{{ payload.heartbeat.label }}</strong>
+            <span id="heartbeatDetail">{{ payload.heartbeat.detail }}</span>
+          </div>
           <p>
             Dashboard strategy switches are written to the shared state file. A running SovereignBot launched with
             <code>python run.py all</code> or <code>python run.py bot</code> applies the latest selection automatically.
           </p>
         </div>
         <div class="overview-grid">
-          <article><span>Mode</span><strong id="paperMode">{{ payload.risk.mode }}</strong></article>
           <article><span>Strategy Sync</span><strong id="strategyAckStatus">{{ payload.strategy_ack.label }}</strong></article>
+          <article><span>Heartbeat</span><strong id="heartbeatStatus">{{ payload.heartbeat.label }}</strong></article>
           <article><span>Bot Running</span><strong id="botRunning">{{ payload.runtime.bot_running }}</strong></article>
           <article><span>State Version</span><strong id="stateVersion">{{ payload.state.version }}</strong></article>
         </div>
@@ -100,7 +104,8 @@
             <div><span>Requested</span><strong id="requestedStrategy">{{ payload.strategy_ack.requested_strategy }}</strong></div>
             <div><span>Applied</span><strong id="appliedStrategy">{{ payload.strategy_ack.applied_strategy or 'none' }}</strong></div>
             <div><span>Bot strategy</span><strong id="botStrategy">{{ payload.runtime.bot_strategy }}</strong></div>
-            <div><span>Heartbeat</span><strong id="botHeartbeat">{{ payload.runtime.last_heartbeat_at or 'not started' }}</strong></div>
+            <div><span>Heartbeat age</span><strong id="heartbeatAge">{{ payload.heartbeat.age_seconds if payload.heartbeat.age_seconds is not none else 'not started' }}</strong></div>
+            <div><span>Last heartbeat</span><strong id="botHeartbeat">{{ payload.runtime.last_heartbeat_at or 'not started' }}</strong></div>
             <div><span>State file</span><strong id="stateFile">{{ payload.risk.state_file }}</strong></div>
             <div><span>Audit file</span><strong id="auditFile">{{ payload.risk.audit_file }}</strong></div>
           </div>
