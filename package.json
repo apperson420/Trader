@@ -3,12 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Governed AI paper-trading command center with safe autonomy, market intelligence, and beginner coaching.",
+  "description": "Governed AI research command center with safe autonomy, beginner coaching, and locked manual readiness controls.",
   "scripts": {
-    "test": "node tools/check-syntax.mjs",
+    "test": "node tools/check-syntax.mjs && node tools/check-governance.mjs && node tools/check-live-safety.mjs",
     "test:syntax": "node tools/check-syntax.mjs",
-    "test:ui": "node tools/browser-ui-smoke.mjs",
     "test:governance": "node tools/check-governance.mjs",
+    "test:safety": "node tools/check-live-safety.mjs",
+    "test:ui": "node tools/browser-ui-smoke.mjs",
     "qa:fallback": "powershell -ExecutionPolicy Bypass -File tools/qa-fallback.ps1",
     "test:smoke": "node tools/smoke-live.mjs",
     "release:manifest": "node tools/release-manifest.mjs"
