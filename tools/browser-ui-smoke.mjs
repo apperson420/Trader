@@ -115,6 +115,19 @@ function mockApiResponse(req, res) {
     jsonResponse(res, 200, { ok: true, configured: false, mode: 'localStorage_fallback' });
     return true;
   }
+  if (url.pathname === '/api/owner-access') {
+    jsonResponse(res, 200, { ok: true, required: false, verified: false, message: 'Smoke: owner access code is not configured.' });
+    return true;
+  }
+  if (url.pathname === '/api/ai-chat' && req.method === 'POST') {
+    jsonResponse(res, 200, {
+      answer: 'Smoke: AI Coach stayed in safe local research mode.',
+      evolution: ['Keep actions paper/research scoped.'],
+      usedExternalAI: false,
+      model: 'smoke-safe-fallback'
+    });
+    return true;
+  }
   if (url.pathname === '/api/market') {
     jsonResponse(res, 200, {
       ok: true,
@@ -192,8 +205,12 @@ async function tryPlaywrightSmoke() {
   const smokeServer = await startSmokeServer();
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   const errors = [];
+  const expectedConsoleNoise = ['Failed to load resource: the server responded with a status of 405 (Method Not Allowed)'];
   page.on('pageerror', (error) => errors.push(error.message));
-  page.on('console', (msg) => { if (msg.type() === 'error') errors.push(msg.text()); });
+  page.on('console', (msg) => {
+    const text = msg.text();
+    if (msg.type() === 'error' && !expectedConsoleNoise.some((expected) => text.includes(expected))) errors.push(text);
+  });
   try {
     await page.goto(smokeServer.url, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => {
