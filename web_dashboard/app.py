@@ -1,4 +1,4 @@
-# BTC Sovereign v1.6 - Web Dashboard Control Center
+# BTC Sovereign v1.7 - Web Dashboard Control Center
 """
 Flask control center for BTC Sovereign / Trader.
 
@@ -11,8 +11,9 @@ from __future__ import annotations
 
 import json
 import time
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from flask import Flask, Response, jsonify, render_template, request
 
@@ -25,6 +26,63 @@ app = Flask(
     template_folder=str(APP_ROOT / "templates"),
     static_folder=str(APP_ROOT / "static"),
 )
+
+
+def _parse_iso(value: Optional[str]) -> Optional[datetime]:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _heartbeat_summary(runtime: Dict[str, Any], *, stale_seconds: int = 10) -> Dict[str, Any]:
+    """Return a clear dashboard-safe heartbeat summary."""
+    last_heartbeat = runtime.get("last_heartbeat_at")
+    heartbeat_dt = _parse_iso(last_heartbeat)
+    age_seconds = None
+    if heartbeat_dt:
+        age_seconds = max(0, int((datetime.now(timezone.utc) - heartbeat_dt).total_seconds()))
+
+    bot_running = bool(runtime.get("bot_running"))
+    bot_status = runtime.get("bot_status") or "unknown"
+    if not last_heartbeat:
+        status = "not_started"
+        label = "No heartbeat yet"
+        detail = "Start the runtime with python run.py all."
+        healthy = False
+    elif bot_status == "error":
+        status = "error"
+        label = "Heartbeat error"
+        detail = "The bot reported an error. Check logs/sovereign_bot.log."
+        healthy = False
+    elif not bot_running:
+        status = "stopped"
+        label = "Bot stopped"
+        detail = "The bot is not currently reporting as running."
+        healthy = False
+    elif age_seconds is not None and age_seconds > stale_seconds:
+        status = "stale"
+        label = "Heartbeat stale"
+        detail = f"Last heartbeat was {age_seconds}s ago. Check whether the bot is still running."
+        healthy = False
+    else:
+        status = "healthy"
+        label = "Heartbeat healthy"
+        detail = "The bot is reporting current runtime heartbeats."
+        healthy = True
+
+    return {
+        "healthy": healthy,
+        "status": status,
+        "label": label,
+        "detail": detail,
+        "last_heartbeat_at": last_heartbeat,
+        "age_seconds": age_seconds,
+        "bot_status": bot_status,
+        "bot_running": bot_running,
+    }
 
 
 def _strategy_acknowledgement(state: Dict[str, Any]) -> Dict[str, Any]:
@@ -70,6 +128,7 @@ def _dashboard_payload() -> Dict[str, Any]:
     strategy = state.get("strategy", "auto")
     runtime = state.get("runtime", {})
     strategy_ack = _strategy_acknowledgement(state)
+    heartbeat = _heartbeat_summary(runtime)
     risk_guardrails = {
         "mode": state.get("mode", config.get("mode", "paper")),
         "real_money_trading": "disabled_by_default",
@@ -85,6 +144,7 @@ def _dashboard_payload() -> Dict[str, Any]:
         "interface": "web_dashboard",
         "strategy": strategy,
         "strategy_ack": strategy_ack,
+        "heartbeat": heartbeat,
         "allowed_strategies": list(shared_state.ALLOWED_STRATEGIES),
         "state": state,
         "runtime": runtime,
@@ -129,6 +189,7 @@ def switch_strategy():
 
     runtime = state.get("runtime", {})
     strategy_ack = _strategy_acknowledgement(state)
+    heartbeat = _heartbeat_summary(runtime)
 
     return jsonify(
         {
@@ -141,6 +202,7 @@ def switch_strategy():
             "new_strategy": state["strategy"],
             "pending_bot_ack": not strategy_ack["acknowledged"],
             "strategy_ack": strategy_ack,
+            "heartbeat": heartbeat,
             "state": state,
             "runtime": runtime,
         }
