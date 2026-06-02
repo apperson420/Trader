@@ -1,4 +1,4 @@
-# BTC Sovereign v1.3 - Atomic Shared Strategy State
+# BTC Sovereign v1.4 - Atomic Shared Runtime State
 """
 Small, dependency-free synchronization layer used by the web dashboard and any
 running SovereignBot process.
@@ -7,6 +7,8 @@ Design goals:
 - Paper/research safe by default.
 - Atomic writes so the bot never reads a half-written JSON file.
 - Strict strategy allowlist so dashboard input cannot request arbitrary actions.
+- Runtime heartbeat/audit data so the dashboard can show whether the bot applied
+  the latest requested strategy.
 - Backward compatible get_current_strategy()/set_current_strategy() helpers.
 """
 
@@ -20,6 +22,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 STATE_FILE = Path(os.environ.get("BTC_SOVEREIGN_STATE_FILE", "current_strategy.json"))
+AUDIT_FILE = Path(os.environ.get("BTC_SOVEREIGN_AUDIT_FILE", "logs/strategy_events.jsonl"))
 
 ALLOWED_STRATEGIES = (
     "auto",
@@ -38,6 +41,13 @@ DEFAULT_STATE: Dict[str, Any] = {
     "mode": "paper",
     "status": "ready",
     "message": "Strategy state initialized.",
+    "runtime": {
+        "bot_running": False,
+        "bot_strategy": "auto",
+        "bot_status": "not_started",
+        "last_heartbeat_at": None,
+        "last_applied_version": 0,
+    },
 }
 
 
@@ -60,15 +70,35 @@ def normalize_strategy(strategy: Optional[str]) -> str:
 
 def _merge_state(raw: Any) -> Dict[str, Any]:
     state = dict(DEFAULT_STATE)
+    state["runtime"] = dict(DEFAULT_STATE["runtime"])
     if isinstance(raw, dict):
+        runtime = raw.get("runtime") if isinstance(raw.get("runtime"), dict) else {}
         state.update(raw)
+        state["runtime"] = dict(DEFAULT_STATE["runtime"])
+        state["runtime"].update(runtime)
     try:
         state["strategy"] = normalize_strategy(state.get("strategy", "auto"))
     except StrategyStateError:
         state["strategy"] = "auto"
         state["status"] = "recovered"
         state["message"] = "Recovered from invalid saved strategy."
+    try:
+        state["runtime"]["bot_strategy"] = normalize_strategy(state["runtime"].get("bot_strategy", state["strategy"]))
+    except StrategyStateError:
+        state["runtime"]["bot_strategy"] = state["strategy"]
     return state
+
+
+def _append_audit(event: str, payload: Dict[str, Any]) -> None:
+    """Best-effort JSONL audit log. Audit failure must never break trading state."""
+    try:
+        AUDIT_FILE.parent.mkdir(parents=True, exist_ok=True)
+        record = {"time": _now_iso(), "event": event, **payload}
+        with AUDIT_FILE.open("a", encoding="utf-8") as handle:
+            json.dump(record, handle, sort_keys=True)
+            handle.write("\n")
+    except OSError:
+        pass
 
 
 def get_strategy_state(default: str = "auto") -> Dict[str, Any]:
@@ -79,12 +109,14 @@ def get_strategy_state(default: str = "auto") -> Dict[str, Any]:
                 return _merge_state(json.load(handle))
         except (OSError, json.JSONDecodeError):
             state = dict(DEFAULT_STATE)
+            state["runtime"] = dict(DEFAULT_STATE["runtime"])
             state["strategy"] = normalize_strategy(default)
             state["status"] = "recovered"
             state["message"] = "State file was unreadable; using safe default."
             return state
 
     state = dict(DEFAULT_STATE)
+    state["runtime"] = dict(DEFAULT_STATE["runtime"])
     state["strategy"] = normalize_strategy(default)
     return state
 
@@ -114,6 +146,7 @@ def set_strategy_state(
     normalized = normalize_strategy(strategy)
     previous = get_strategy_state()
     state = dict(previous)
+    state["runtime"] = dict(previous.get("runtime", DEFAULT_STATE["runtime"]))
     state.update(
         {
             "strategy": normalized,
@@ -129,6 +162,15 @@ def set_strategy_state(
     if extra:
         state.update(extra)
     _atomic_write(state)
+    _append_audit(
+        "strategy_switch_requested",
+        {
+            "strategy": normalized,
+            "previous_strategy": previous.get("strategy"),
+            "updated_by": updated_by,
+            "version": state["version"],
+        },
+    )
     return state
 
 
@@ -137,12 +179,61 @@ def acknowledge_strategy(strategy: Optional[str] = None, *, updated_by: str = "b
     state = get_strategy_state()
     if strategy is not None:
         state["strategy"] = normalize_strategy(strategy)
+    runtime = dict(state.get("runtime", DEFAULT_STATE["runtime"]))
+    runtime.update(
+        {
+            "bot_running": True,
+            "bot_strategy": state["strategy"],
+            "bot_status": "active",
+            "last_heartbeat_at": _now_iso(),
+            "last_applied_version": int(state.get("version") or 0),
+        }
+    )
+    state["runtime"] = runtime
     state["status"] = "active"
-    state["bot_acknowledged_at"] = _now_iso()
+    state["bot_acknowledged_at"] = runtime["last_heartbeat_at"]
     state["bot_acknowledged_by"] = updated_by
     state["message"] = f"Strategy active in runtime: {state['strategy']}"
     _atomic_write(state)
+    _append_audit(
+        "strategy_applied_by_runtime",
+        {
+            "strategy": state["strategy"],
+            "updated_by": updated_by,
+            "version": state.get("version"),
+        },
+    )
     return state
+
+
+def record_runtime_heartbeat(
+    *,
+    bot_strategy: Optional[str] = None,
+    bot_status: str = "running",
+    message: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Update runtime status without changing the requested dashboard strategy."""
+    state = get_strategy_state()
+    strategy = normalize_strategy(bot_strategy or state.get("strategy", "auto"))
+    runtime = dict(state.get("runtime", DEFAULT_STATE["runtime"]))
+    runtime.update(
+        {
+            "bot_running": bot_status not in {"stopped", "error"},
+            "bot_strategy": strategy,
+            "bot_status": bot_status,
+            "last_heartbeat_at": _now_iso(),
+        }
+    )
+    state["runtime"] = runtime
+    if message:
+        state["message"] = message
+    _atomic_write(state)
+    return state
+
+
+def mark_runtime_stopped(message: str = "Runtime stopped.") -> Dict[str, Any]:
+    """Record a clean shutdown/error state for dashboard visibility."""
+    return record_runtime_heartbeat(bot_status="stopped", message=message)
 
 
 def get_current_strategy(default: str = "auto") -> str:
@@ -188,4 +279,6 @@ def sync_strategy_to_bot(bot: Any, *, acknowledge: bool = True) -> Dict[str, Any
 
     if acknowledge:
         state = acknowledge_strategy(strategy, updated_by="bot")
+    else:
+        record_runtime_heartbeat(bot_strategy=strategy, bot_status="synced")
     return state
