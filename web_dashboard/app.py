@@ -1,4 +1,4 @@
-# BTC Sovereign v1.4 - Web Dashboard Control Center
+# BTC Sovereign v1.5 - Web Dashboard Control Center
 """
 Flask control center for BTC Sovereign / Trader.
 
@@ -77,24 +77,33 @@ def switch_strategy():
     requested_strategy = data.get("strategy")
 
     try:
-        state = shared_state.set_strategy_state(
+        shared_state.set_current_strategy(
             requested_strategy,
             updated_by="dashboard",
             message=f"Dashboard requested strategy switch to {requested_strategy}.",
         )
+        state = shared_state.get_strategy_state()
     except shared_state.StrategyStateError as exc:
-        return jsonify({"ok": False, "error": str(exc)}), 400
+        return jsonify({"ok": False, "status": "error", "error": str(exc)}), 400
     except OSError as exc:
-        return jsonify({"ok": False, "error": f"Could not persist strategy state: {exc}"}), 500
+        return jsonify({"ok": False, "status": "error", "error": f"Could not persist strategy state: {exc}"}), 500
+
+    runtime = state.get("runtime", {})
+    bot_strategy = runtime.get("bot_strategy")
+    pending = bot_strategy != state["strategy"] or runtime.get("last_applied_version") != state.get("version")
 
     return jsonify(
         {
             "ok": True,
             "status": "success",
-            "message": f"Strategy switch saved: {state['strategy']}. Running bot will apply it on next sync/poll.",
+            "message": (
+                f"Strategy switch saved: {state['strategy']}. "
+                "Running bot will apply it on the next sync cycle."
+            ),
             "new_strategy": state["strategy"],
+            "pending_bot_ack": pending,
             "state": state,
-            "runtime": state.get("runtime", {}),
+            "runtime": runtime,
         }
     )
 
