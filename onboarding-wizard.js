@@ -90,13 +90,9 @@
     return state;
   }
 
-  function isComplete(id) {
-    return readState().completed.includes(id);
-  }
-
   function setComplete(id, done) {
     const state = readState();
-    const completed = new Set(state.completed);
+    const completed = new Set(state.completed || []);
     if (done) completed.add(id);
     else completed.delete(id);
     writeState({ ...state, completed: [...completed] });
@@ -131,6 +127,7 @@
     panel.classList.toggle('setup-open', open);
     panel.setAttribute('aria-hidden', open ? 'false' : 'true');
     button.setAttribute('aria-expanded', open ? 'true' : 'false');
+    button.textContent = open ? 'Hide setup wizard' : 'Open setup wizard';
     if (open) writeState({ ...readState(), hidden: false, lastOpenedAt: new Date().toISOString() });
   }
 
@@ -144,7 +141,7 @@
     const count = document.getElementById('setupWizardCount');
     if (!box || !count) return;
     const state = readState();
-    const completed = new Set(state.completed);
+    const completed = new Set(state.completed || []);
     count.textContent = `${completed.size}/${steps.length} done`;
     box.innerHTML = steps.map((step, index) => {
       const done = completed.has(step.id);
@@ -161,79 +158,67 @@
       input.addEventListener('change', () => setComplete(input.dataset.step, input.checked));
     });
     box.querySelectorAll('.setup-jump').forEach((button) => {
-      button.addEventListener('click', () => {
-        setOpen(false);
-        scrollToTarget(button.dataset.target);
-      });
+      button.addEventListener('click', () => scrollToTarget(button.dataset.target));
     });
   }
 
   function render() {
-    if (document.getElementById('setupWizard')) return;
+    if (document.getElementById('setupWizardDock')) return;
     const style = document.createElement('style');
     style.textContent = `
-      .setup-open-button{position:fixed;right:18px;bottom:18px;z-index:40;width:auto;box-shadow:0 18px 48px rgba(0,0,0,.34)}
-      .setup-wizard{position:fixed;right:18px;top:86px;bottom:84px;z-index:39;width:min(430px,calc(100% - 32px));display:grid;grid-template-rows:auto 1fr auto;gap:12px;padding:16px;border:1px solid rgba(255,255,255,.18);border-radius:18px;background:#0f1b30;box-shadow:0 24px 80px rgba(0,0,0,.45);transform:translateX(calc(100% + 40px));transition:transform .22s ease;overflow:hidden}
-      .setup-wizard.setup-open{transform:translateX(0)}
-      .setup-wizard[aria-hidden="true"]{pointer-events:none}
-      .setup-head{display:flex;justify-content:space-between;gap:12px;align-items:start}
-      .setup-head h3{margin:4px 0 6px;font-size:24px}
-      .setup-close{width:42px;height:42px;padding:0;border-radius:999px}
-      .setup-copy{display:grid;gap:10px;overflow:auto;padding-right:4px}
+      .setup-dock{margin:0 0 18px 0;border:1px solid rgba(255,255,255,.18);border-radius:20px;background:rgba(15,27,48,.88);box-shadow:0 18px 50px rgba(0,0,0,.18);padding:14px;position:relative;z-index:1}
+      .setup-dock-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+      .setup-dock-head h3{margin:4px 0 6px;font-size:24px}.setup-dock-actions{display:flex;gap:8px;flex-wrap:wrap}.setup-dock-actions button{width:auto;border-radius:12px}
+      .setup-wizard{display:none;margin-top:12px;border-top:1px solid rgba(255,255,255,.14);padding-top:12px}
+      .setup-wizard.setup-open{display:grid;gap:12px}
+      .setup-wizard[aria-hidden="true"]{display:none}
+      .setup-copy{display:grid;gap:10px}
       .setup-note,.setup-step{border:1px solid rgba(255,255,255,.14);border-radius:14px;background:rgba(255,255,255,.055);padding:12px}
-      .setup-note strong{display:block;color:#a7f3d0;margin-bottom:5px}
-      .setup-note p,.setup-step small{display:block;color:#c7d4e5;line-height:1.45;margin:0}
-      .setup-step{display:grid;gap:10px}
-      .setup-step label{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start}
-      .setup-step input{width:auto;margin-top:3px}
-      .setup-step strong{color:#edf6ff}
-      .setup-step.setup-done{border-left:4px solid #a7f3d0}
-      .setup-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-      .setup-actions button,.setup-jump{border-radius:12px}
-      .setup-secondary{background:rgba(255,255,255,.1);color:#edf6ff;border:1px solid rgba(255,255,255,.2)}
-      @media(max-width:700px){.setup-wizard{inset:auto 12px 74px 12px;top:72px;width:auto}.setup-open-button{right:12px;bottom:12px}.setup-actions{grid-template-columns:1fr}}
-      @media print{.setup-wizard,.setup-open-button{display:none!important}}
+      .setup-note strong{display:block;color:#a7f3d0;margin-bottom:5px}.setup-note p,.setup-step small{display:block;color:#c7d4e5;line-height:1.45;margin:0}
+      .setup-step{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}.setup-step label{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start}.setup-step input{width:auto;margin-top:3px}.setup-step strong{color:#edf6ff}.setup-step.setup-done{border-left:4px solid #a7f3d0}
+      .setup-actions{display:flex;gap:10px;flex-wrap:wrap}.setup-actions button,.setup-jump{width:auto;border-radius:12px}.setup-secondary{background:rgba(255,255,255,.1);color:#edf6ff;border:1px solid rgba(255,255,255,.2)}
+      @media(max-width:700px){.setup-dock-actions,.setup-actions{display:grid;grid-template-columns:1fr}.setup-dock-actions button,.setup-actions button,.setup-jump{width:100%}.setup-step{grid-template-columns:1fr}}
+      @media print{.setup-dock{display:none!important}}
     `;
     document.head.appendChild(style);
 
-    const button = document.createElement('button');
-    button.id = 'setupWizardOpen';
-    button.className = 'setup-open-button';
-    button.type = 'button';
-    button.setAttribute('aria-controls', 'setupWizard');
-    button.setAttribute('aria-expanded', 'false');
-    button.textContent = 'Open setup wizard';
-    document.body.appendChild(button);
-
-    const panel = document.createElement('aside');
-    panel.id = 'setupWizard';
-    panel.className = 'setup-wizard';
-    panel.setAttribute('aria-hidden', 'true');
-    panel.innerHTML = `
-      <div class="setup-head">
-        <div><span class="label">First-run setup</span><h3>Start safely in 10 minutes</h3><p class="muted">Use this checklist while the dashboard stays available behind it.</p></div>
-        <button id="setupWizardClose" class="setup-close setup-secondary" type="button" aria-label="Close setup wizard">X</button>
+    const dock = document.createElement('section');
+    dock.id = 'setupWizardDock';
+    dock.className = 'setup-dock';
+    dock.innerHTML = `
+      <div class="setup-dock-head">
+        <div><span class="label">First-run setup</span><h3>Start safely in 10 minutes</h3><p class="muted">This setup guide now lives inside the page, so it does not cover or overlap the dashboard.</p></div>
+        <div class="setup-dock-actions">
+          <button id="setupWizardOpen" type="button" aria-controls="setupWizard" aria-expanded="false">Open setup wizard</button>
+          <button id="setupWizardDone" class="setup-secondary" type="button">Do not show again</button>
+        </div>
       </div>
-      <div class="setup-copy">
-        <div class="setup-note"><strong>Paper and research only</strong><p>No real-money trades are sent. This app helps you study, chart, test, validate, and journal ideas. It is not investment advice.</p></div>
-        <div class="setup-note"><strong>What works now</strong><p>Watchlist, journal, Smart Analyst, Market Intelligence, historical charts, 100-generation evolution, validation, backup export/import, and optional paper-broker setup checks.</p></div>
-        <div class="setup-note"><strong>Optional setup</strong><p>Alpaca paper keys, Supabase backup, OpenAI, and stock quote keys belong in Vercel server settings. The app still works without them.</p></div>
-        <div class="section-head"><div><span class="label">Checklist</span><h3>What to click first</h3></div><strong id="setupWizardCount">0/${steps.length} done</strong></div>
-        <div id="setupWizardSteps"></div>
-      </div>
-      <div class="setup-actions">
-        <button id="setupWizardDone" type="button">Do not show again</button>
-        <button id="setupWizardLater" class="setup-secondary" type="button">Close for now</button>
-      </div>
+      <aside id="setupWizard" class="setup-wizard" aria-hidden="true">
+        <div class="setup-copy">
+          <div class="setup-note"><strong>Paper and research only</strong><p>No real-money trades are sent. This app helps you study, chart, test, validate, and journal ideas. It is not investment advice.</p></div>
+          <div class="setup-note"><strong>What works now</strong><p>Watchlist, journal, Smart Analyst, Market Intelligence, historical charts, 100-generation evolution, validation, backup export/import, and optional paper-broker setup checks.</p></div>
+          <div class="setup-note"><strong>Optional setup</strong><p>Alpaca paper keys, Supabase backup, OpenAI, and stock quote keys belong in Vercel server settings. The app still works without them.</p></div>
+          <div class="section-head"><div><span class="label">Checklist</span><h3>What to click first</h3></div><strong id="setupWizardCount">0/${steps.length} done</strong></div>
+          <div id="setupWizardSteps"></div>
+        </div>
+        <div class="setup-actions">
+          <button id="setupWizardLater" class="setup-secondary" type="button">Collapse setup guide</button>
+        </div>
+      </aside>
     `;
-    document.body.appendChild(panel);
 
-    button.addEventListener('click', () => setOpen(!panel.classList.contains('setup-open')));
-    document.getElementById('setupWizardClose').addEventListener('click', () => setOpen(false));
+    const workflow = document.getElementById('guidedWorkflow');
+    const hero = document.querySelector('.hero');
+    if (workflow?.parentNode) workflow.parentNode.insertBefore(dock, workflow.nextSibling);
+    else if (hero?.parentNode) hero.parentNode.insertBefore(dock, hero.nextSibling);
+    else document.body.prepend(dock);
+
+    const panel = document.getElementById('setupWizard');
+    document.getElementById('setupWizardOpen').addEventListener('click', () => setOpen(!panel.classList.contains('setup-open')));
     document.getElementById('setupWizardLater').addEventListener('click', () => setOpen(false));
     document.getElementById('setupWizardDone').addEventListener('click', dismissForever);
     renderSteps();
-    if (!readState().hidden) setTimeout(() => setOpen(true), 500);
+    if (!readState().hidden) setTimeout(() => setOpen(true), 300);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', render);
