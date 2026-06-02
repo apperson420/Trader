@@ -11,6 +11,21 @@ async function body(req) {
   try { return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'); } catch { return {}; }
 }
 
+function ownerCode() {
+  return String(process.env.TRADER_OWNER_ACCESS_CODE || '').trim();
+}
+
+function ownerVerified(req) {
+  const required = Boolean(ownerCode());
+  const provided = String(req.headers['x-trader-owner-code'] || '').trim();
+  return { required, verified: !required || provided === ownerCode() };
+}
+
+function ownerBlocked(req) {
+  const owner = ownerVerified(req);
+  return owner.required && !owner.verified;
+}
+
 function cfg() {
   return {
     url: String(process.env.SUPABASE_URL || '').replace(/\/+$/, ''),
@@ -51,7 +66,7 @@ function cleanPayload(value) {
     schemaVersion: Number(payload.schemaVersion || 1),
     app: 'Trader Command Center',
     savedAt: new Date().toISOString(),
-    safety: 'paper only, research only, not investment advice, no real-money order was sent',
+    safety: 'paper/research by default, not investment advice, no autonomous live trading',
     keys: Array.isArray(payload.keys) ? payload.keys.slice(0, 80) : [],
     data: payload.data && typeof payload.data === 'object' ? payload.data : {}
   };
@@ -60,26 +75,32 @@ function cleanPayload(value) {
 export default async function handler(req, res) {
   const action = String(req.query.action || 'status');
   const c = cfg();
+  const owner = ownerVerified(req);
   try {
     if (action === 'status') {
       return json(res, 200, {
         ok: true,
         configured: configured(c),
+        ownerAccessRequired: owner.required,
+        ownerAccessVerified: owner.verified,
         mode: configured(c) ? 'supabase_ready_server_side' : 'localStorage_fallback',
         table: c.table,
         rowKey: c.rowKey,
-        message: configured(c) ? 'Supabase persistence endpoint is configured server-side.' : setupMessage()
+        message: owner.required && !owner.verified
+          ? 'Owner access is required before cloud persistence load/save. Local browser backup still works.'
+          : (configured(c) ? 'Supabase persistence endpoint is configured server-side.' : setupMessage())
       });
     }
+    if (ownerBlocked(req)) return json(res, 200, { ok: false, configured: configured(c), ownerAccessRequired: true, ownerAccessVerified: false, mode: 'owner_access_required_local_fallback', message: 'Owner access code required before cloud persistence load/save. Local browser backup can continue.' });
     if (!configured(c)) {
-      return json(res, 200, { ok: false, configured: false, mode: 'localStorage_fallback', message: setupMessage() });
+      return json(res, 200, { ok: false, configured: false, ownerAccessRequired: owner.required, ownerAccessVerified: owner.verified, mode: 'localStorage_fallback', message: setupMessage() });
     }
     if (action === 'load') {
       if (req.method !== 'GET') return json(res, 405, { ok: false, message: 'GET only for persistence load.' });
       const path = `${encodeURIComponent(c.table)}?id=eq.${encodeURIComponent(c.rowKey)}&select=payload,updated_at&limit=1`;
       const result = await supabase(c, path);
       const row = Array.isArray(result.data) ? result.data[0] : null;
-      return json(res, 200, { ok: result.ok, configured: true, status: result.status, payload: row?.payload || null, updatedAt: row?.updated_at || null });
+      return json(res, 200, { ok: result.ok, configured: true, ownerAccessRequired: owner.required, ownerAccessVerified: owner.verified, status: result.status, payload: row?.payload || null, updatedAt: row?.updated_at || null });
     }
     if (action === 'save') {
       if (req.method !== 'POST') return json(res, 405, { ok: false, message: 'POST only for persistence save.' });
@@ -91,13 +112,15 @@ export default async function handler(req, res) {
         headers: { prefer: 'resolution=merge-duplicates,return=representation' },
         body: JSON.stringify(row)
       });
-      return json(res, 200, { ok: result.ok, configured: true, status: result.status, mode: 'supabase_ready_server_side' });
+      return json(res, 200, { ok: result.ok, configured: true, ownerAccessRequired: owner.required, ownerAccessVerified: owner.verified, status: result.status, mode: 'supabase_ready_server_side' });
     }
     return json(res, 404, { ok: false, message: 'Unknown persistence action.' });
   } catch (error) {
     return json(res, 200, {
       ok: false,
       configured: configured(c),
+      ownerAccessRequired: owner.required,
+      ownerAccessVerified: owner.verified,
       mode: configured(c) ? 'supabase_safe_failure_local_fallback' : 'localStorage_fallback',
       message: error.message || 'Persistence endpoint failed safely. The browser localStorage fallback can continue working.'
     });
