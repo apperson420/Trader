@@ -247,7 +247,10 @@ async function tryPlaywrightSmoke() {
       persistencePanel: Boolean(document.getElementById('persistenceEngine')),
       guidedWorkflow: Boolean(document.getElementById('guidedWorkflow')),
       guidedMode: document.getElementById('workflowMode')?.textContent,
-      manualLiveTicket: liveTicketState
+      manualLiveTicket: {
+        exists: Boolean(document.getElementById('manualLiveOrderTicket')),
+        locked: Boolean(document.getElementById('liveTicketSubmit')?.disabled)
+      }
     }));
     if (errors.length) fail(`browser console errors: ${errors.join(' | ')}`);
     if (result.watchCount !== before.watchCount + 1) fail(`watchlist did not update in browser smoke: ${JSON.stringify({ before, result })}`);
