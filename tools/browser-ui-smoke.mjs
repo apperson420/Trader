@@ -18,6 +18,7 @@ mkdirSync(artifactDir, { recursive: true });
 const requiredHtml = [
   ['persistence loader', './persistence-engine.js'],
   ['main app loader', './app.js'],
+  ['guided workflow loader', './guided-workflow.js'],
   ['paper/research safety copy', 'no real orders placed'],
   ['watchlist form', 'id="watchForm"'],
   ['journal form', 'id="journalForm"']
@@ -26,6 +27,7 @@ const requiredHtml = [
 const requiredFiles = [
   'paper-broker.js',
   'onboarding-wizard.js',
+  'guided-workflow.js',
   'persistence-engine.js',
   'api/alpaca-paper.js',
   'api/persistence.js'
@@ -168,10 +170,12 @@ async function tryPlaywrightSmoke() {
       const journal = document.getElementById('journalList');
       return Boolean(watchlist?.textContent.trim() && journal?.textContent.trim());
     });
+    await page.waitForSelector('#guidedWorkflow');
     await page.waitForSelector('#setupWizardOpen');
+    await page.click('#setupWizardOpen');
     await page.waitForFunction(() => document.getElementById('setupWizard')?.classList.contains('setup-open'));
     const wizardVisible = await page.evaluate(() => document.getElementById('setupWizard')?.classList.contains('setup-open'));
-    if (!wizardVisible) fail('first-run setup wizard did not open for a new browser session');
+    if (!wizardVisible) fail('first-run setup wizard did not open inline for a new browser session');
     await page.click('#setupWizardLater');
     await page.click('#clearWatchlist');
     await page.click('#clearJournal');
@@ -184,6 +188,9 @@ async function tryPlaywrightSmoke() {
     await page.fill('#journalTitle', 'Smoke note');
     await page.fill('#journalText', 'Paper only smoke note.');
     await page.click('#journalForm button');
+    await page.click('#workflowStart');
+    await page.waitForFunction(() => document.getElementById('workflowMode')?.textContent === 'Guiding');
+    await page.click('#workflowNext');
     await page.waitForSelector('#paperBroker');
     await page.click('#brokerSetupCheck');
     await page.waitForFunction(() => {
@@ -195,16 +202,19 @@ async function tryPlaywrightSmoke() {
       watchCount: Number.parseInt(document.getElementById('watchCount')?.textContent || '0', 10),
       journalCount: Number.parseInt(document.getElementById('journalCount')?.textContent || '0', 10),
       brokerWizard: Boolean(document.getElementById('brokerSetupOutput')?.textContent.includes('ALPACA_PAPER_KEY_ID')),
-      persistencePanel: Boolean(document.getElementById('persistenceEngine'))
+      persistencePanel: Boolean(document.getElementById('persistenceEngine')),
+      guidedWorkflow: Boolean(document.getElementById('guidedWorkflow')),
+      guidedMode: document.getElementById('workflowMode')?.textContent
     }));
     if (errors.length) fail(`browser console errors: ${errors.join(' | ')}`);
     if (result.watchCount !== before.watchCount + 1) fail(`watchlist did not update in browser smoke: ${JSON.stringify({ before, result })}`);
     if (result.journalCount !== before.journalCount + 1) fail(`journal did not update in browser smoke: ${JSON.stringify({ before, result })}`);
+    if (!result.guidedWorkflow || result.guidedMode !== 'Guiding') fail('guided workflow did not start');
     if (!result.brokerWizard) fail('broker setup wizard did not render setup status');
     if (!result.persistencePanel) fail('persistence panel did not render');
     await page.screenshot({ path: resolve(artifactDir, 'browser-ui-smoke.png'), fullPage: true });
     if (!process.exitCode) console.log('Playwright browser/UI smoke passed.');
-    if (!process.exitCode) pass('Playwright browser workflow updated watchlist, journal, paper setup wizard, and persistence panel');
+    if (!process.exitCode) pass('Playwright browser workflow updated watchlist, journal, guided workflow, paper setup wizard, and persistence panel');
   } finally {
     await browser.close();
     await smokeServer.close();
@@ -235,9 +245,9 @@ const broker = readFileSync(resolve(root, 'paper-broker.js'), 'utf8');
 const brokerApi = readFileSync(resolve(root, 'api/alpaca-paper.js'), 'utf8');
 const persistence = readFileSync(resolve(root, 'persistence-engine.js'), 'utf8');
 const onboarding = readFileSync(resolve(root, 'onboarding-wizard.js'), 'utf8');
+const guided = readFileSync(resolve(root, 'guided-workflow.js'), 'utf8');
 const autonomy = readFileSync(resolve(root, 'autonomous-engine.js'), 'utf8');
 const hub = readFileSync(resolve(root, 'free-tools-hub.js'), 'utf8');
-
 const behaviorChecks = [
   ['Alpaca setup wizard visible', broker.includes('Paper setup wizard')],
   ['Alpaca setup-status API call wired', broker.includes("api('setup-status')")],
@@ -247,6 +257,9 @@ const behaviorChecks = [
   ['Supabase fallback message present', persistence.includes('LocalStorage fallback is active')],
   ['First-run setup wizard present', onboarding.includes('Start safely in 10 minutes') && onboarding.includes('Do not show again')],
   ['Setup wizard stays paper/research scoped', onboarding.includes('No real-money trades are sent') && onboarding.includes('not investment advice')],
+  ['Setup wizard no longer uses fixed overlap panel', !onboarding.includes('position:fixed') && onboarding.includes('setup-dock')],
+  ['Guided workflow present', guided.includes('Guided Workflow Mode') && guided.includes('Export workflow receipt')],
+  ['Guided workflow stays paper/research scoped', guided.includes('paper_research_only') && guided.includes('not investment advice')],
   ['Autonomy panel states current limits, not roadmap stages', autonomy.includes('Autonomy safety limits') && !autonomy.includes('Autonomy roadmap')],
   ['Tool hub avoids fake live integration copy', hub.includes('What is live, setup-ready, or external') && !hub.includes('represented in the product plan')]
 ];
