@@ -114,6 +114,9 @@ export default async function handler(req, res) {
     if (action === 'submit-order') {
       if (req.method !== 'POST') return json(res, 405, { ok: false, liveTrading: true, message: 'POST only for live order submission.' });
       const b = await body(req);
+      if (b.manualSubmission !== true || String(b.clientContext || '') !== 'manual_live_order_ticket_v1') {
+        return json(res, 200, disabled('Manual live order ticket is required. AI/autopilot and background workflows cannot submit live orders.'));
+      }
       const confirmation = String(b.confirmation || '').trim();
       if (confirmation !== 'LIVE ORDER - I ACCEPT REAL MONEY RISK') {
         return json(res, 200, disabled('Type LIVE ORDER - I ACCEPT REAL MONEY RISK to confirm manual live trading.'));

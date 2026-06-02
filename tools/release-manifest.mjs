@@ -16,7 +16,7 @@ walk(process.cwd());
 const manifest = {
   app: 'Trader Command Center',
   generatedAt: new Date().toISOString(),
-  safety: 'Paper/research mode only unless configured paper broker keys are provided. No real-money execution.',
+  safety: 'Paper/research mode by default. Optional manual live trading is disabled unless server-side env vars are configured; no autonomous live trading.',
   capabilities: [
     'AI Coach Chat',
     'Smart Analyst setup scoring',
@@ -25,6 +25,7 @@ const manifest = {
     'Read-only market data',
     'Paper broker control center',
     'Alpaca paper setup wizard with server-side environment checks',
+    'Optional manual live trading readiness and manual limit-ticket flow, disabled unless server-side env vars are configured',
     'Browser/UI smoke fallback for npm-missing QA',
     'First-run setup wizard with beginner-safe product guidance',
     'Professional chart engine',

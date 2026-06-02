@@ -26,10 +26,13 @@ const requiredHtml = [
 
 const requiredFiles = [
   'paper-broker.js',
+  'live-trading-control.js',
+  'mode-control-center.js',
   'onboarding-wizard.js',
   'guided-workflow.js',
   'persistence-engine.js',
   'api/alpaca-paper.js',
+  'api/alpaca-live.js',
   'api/persistence.js'
 ];
 
@@ -78,6 +81,34 @@ function mockApiResponse(req, res) {
       },
       message: 'Playwright smoke: paper setup missing safely.'
     });
+    return true;
+  }
+  if (url.pathname === '/api/alpaca-live') {
+    const action = url.searchParams.get('action') || 'setup-status';
+    if (action === 'setup-status') {
+      jsonResponse(res, 200, {
+        ok: false,
+        configured: false,
+        liveTrading: true,
+        manualOnly: true,
+        autonomousLiveTrading: false,
+        checks: {
+          TRADER_ENABLE_LIVE_TRADING: false,
+          ALPACA_LIVE_KEY_ID: false,
+          ALPACA_LIVE_SECRET_KEY: false,
+          ALPACA_LIVE_BASE_URL: true,
+          TRADER_LIVE_MAX_NOTIONAL: true
+        },
+        maxNotional: 250,
+        message: 'Smoke: live trading stays locked unless server-side setup is complete.'
+      });
+      return true;
+    }
+    if (action === 'status') {
+      jsonResponse(res, 200, { ok: false, configured: false, liveTrading: true, manualOnly: true, message: 'Smoke: live account not configured.' });
+      return true;
+    }
+    jsonResponse(res, 200, { ok: false, configured: false, liveTrading: true, manualOnly: true, message: 'Smoke: live order submission blocked.' });
     return true;
   }
   if (url.pathname === '/api/persistence') {
@@ -192,6 +223,16 @@ async function tryPlaywrightSmoke() {
     await page.waitForFunction(() => document.getElementById('workflowMode')?.textContent === 'Guiding');
     await page.click('#workflowNext');
     await page.waitForSelector('#paperBroker');
+    await page.waitForSelector('#liveTradingControl');
+    await page.waitForSelector('#manualLiveOrderTicket');
+    const liveTicketState = await page.evaluate(() => ({
+      exists: Boolean(document.getElementById('manualLiveOrderTicket')),
+      locked: Boolean(document.getElementById('liveTicketSubmit')?.disabled),
+      warning: document.getElementById('liveTradingControl')?.textContent.includes('Real money can be lost'),
+      phrase: document.getElementById('liveTicketConfirm')?.getAttribute('placeholder') === 'LIVE ORDER - I ACCEPT REAL MONEY RISK',
+      noAi: document.getElementById('liveTradingControl')?.textContent.includes('AI/autopilot cannot submit live trades')
+    }));
+    if (!liveTicketState.exists || !liveTicketState.locked || !liveTicketState.warning || !liveTicketState.phrase || !liveTicketState.noAi) fail(`manual live ticket safety state failed: ${JSON.stringify(liveTicketState)}`);
     await page.click('#brokerSetupCheck');
     await page.waitForFunction(() => {
       const output = document.getElementById('brokerSetupOutput')?.textContent || '';
@@ -204,7 +245,8 @@ async function tryPlaywrightSmoke() {
       brokerWizard: Boolean(document.getElementById('brokerSetupOutput')?.textContent.includes('ALPACA_PAPER_KEY_ID')),
       persistencePanel: Boolean(document.getElementById('persistenceEngine')),
       guidedWorkflow: Boolean(document.getElementById('guidedWorkflow')),
-      guidedMode: document.getElementById('workflowMode')?.textContent
+      guidedMode: document.getElementById('workflowMode')?.textContent,
+      manualLiveTicket: liveTicketState
     }));
     if (errors.length) fail(`browser console errors: ${errors.join(' | ')}`);
     if (result.watchCount !== before.watchCount + 1) fail(`watchlist did not update in browser smoke: ${JSON.stringify({ before, result })}`);
@@ -244,10 +286,14 @@ for (const file of requiredFiles) {
 const broker = readFileSync(resolve(root, 'paper-broker.js'), 'utf8');
 const brokerApi = readFileSync(resolve(root, 'api/alpaca-paper.js'), 'utf8');
 const persistence = readFileSync(resolve(root, 'persistence-engine.js'), 'utf8');
+const liveControl = readFileSync(resolve(root, 'live-trading-control.js'), 'utf8');
+const modeControl = readFileSync(resolve(root, 'mode-control-center.js'), 'utf8');
+const liveApi = readFileSync(resolve(root, 'api/alpaca-live.js'), 'utf8');
 const onboarding = readFileSync(resolve(root, 'onboarding-wizard.js'), 'utf8');
 const guided = readFileSync(resolve(root, 'guided-workflow.js'), 'utf8');
 const autonomy = readFileSync(resolve(root, 'autonomous-engine.js'), 'utf8');
 const hub = readFileSync(resolve(root, 'free-tools-hub.js'), 'utf8');
+const browserSources = [liveControl, modeControl, guided, autonomy, hub, readFileSync(resolve(root, 'app.js'), 'utf8')].join('\n');
 const behaviorChecks = [
   ['Alpaca setup wizard visible', broker.includes('Paper setup wizard')],
   ['Alpaca setup-status API call wired', broker.includes("api('setup-status')")],
@@ -255,6 +301,14 @@ const behaviorChecks = [
   ['Full backup export present', persistence.includes('Export full backup JSON')],
   ['Backup import present', persistence.includes('Import backup JSON')],
   ['Supabase fallback message present', persistence.includes('LocalStorage fallback is active')],
+  ['Live control module exists', liveControl.includes('Manual Live Order Ticket') && liveControl.includes('manualLiveOrderTicket')],
+  ['Mode control module exists', modeControl.includes('Mode Control') && modeControl.includes('live-readiness')],
+  ['Manual live ticket locked by default', liveControl.includes('disabled>Submit manual live limit-day ticket') && liveControl.includes('Live ticket locked')],
+  ['Real-money warning exists', liveControl.includes('Real money can be lost')],
+  ['Exact live confirmation phrase required', liveControl.includes('LIVE ORDER - I ACCEPT REAL MONEY RISK') && liveApi.includes('LIVE ORDER - I ACCEPT REAL MONEY RISK')],
+  ['AI/autopilot cannot submit live trades wording exists', liveControl.includes('AI/autopilot cannot submit live trades') && liveApi.includes('AI/autopilot and background workflows cannot submit live orders')],
+  ['No live API key strings are stored in browser code', !browserSources.includes('ALPACA_LIVE_KEY') && !browserSources.includes('ALPACA_LIVE_SECRET')],
+  ['No autonomous live trading path exists', liveApi.includes('manualSubmission !== true') && !browserSources.includes("action=submit-order'") && liveControl.includes("liveApi('submit-order'")],
   ['First-run setup wizard present', onboarding.includes('Start safely in 10 minutes') && onboarding.includes('Do not show again')],
   ['Setup wizard stays paper/research scoped', onboarding.includes('No real-money trades are sent') && onboarding.includes('not investment advice')],
   ['Setup wizard no longer uses fixed overlap panel', !onboarding.includes('position:fixed') && onboarding.includes('setup-dock')],

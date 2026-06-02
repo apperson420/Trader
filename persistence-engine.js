@@ -22,7 +22,10 @@
     ['chat_learning', []],
     ['free_tools_registry', []],
     ['setup_wizard', null],
-    ['guided_workflow', null]
+    ['guided_workflow', null],
+    ['live_broker_logs', []],
+    ['live_trading_acknowledged', null],
+    ['trading_mode_control', null]
   ];
   const KEY_SET = new Set(KEYS.map(([name]) => `${PREFIX}${name}`));
   const ARRAY_KEYS = new Set(KEYS.filter(([, fallback]) => Array.isArray(fallback)).map(([name]) => name));
@@ -103,7 +106,7 @@
       app: 'Trader Command Center',
       reason,
       exportedAt: new Date().toISOString(),
-      safety: 'paper only, research only, not investment advice, no real-money order was sent',
+      safety: 'paper/research by default; optional manual live ticket logs may exist; not investment advice; no API keys or secrets included',
       keys: KEYS.map(([name]) => name),
       data: collectData()
     };
@@ -264,6 +267,7 @@
       ['Playbooks', 'playbooks'],
       ['AI plans', 'ai_plans'],
       ['Broker logs', 'broker_logs'],
+      ['Live logs', 'live_broker_logs'],
       ['Reports', 'validation_report'],
       ['Workflow', 'guided_workflow']
     ].map(([label, name]) => `<span>${label}: ${dataCount(name)}</span>`).join('');

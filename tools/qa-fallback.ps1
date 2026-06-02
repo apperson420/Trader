@@ -50,9 +50,12 @@ if ($nodeOk) {
     "index.html",
     "app.js",
     "onboarding-wizard.js",
+    "live-trading-control.js",
+    "mode-control-center.js",
     "paper-broker.js",
     "persistence-engine.js",
     "api/alpaca-paper.js",
+    "api/alpaca-live.js",
     "api/persistence.js",
     "tools/browser-ui-smoke.mjs"
   )
@@ -64,10 +67,16 @@ if ($nodeOk) {
     Write-Host "OK file exists: $file"
   }
   $broker = Get-Content -Raw paper-broker.js
+  $live = Get-Content -Raw live-trading-control.js
+  $liveApi = Get-Content -Raw api/alpaca-live.js
   $onboarding = Get-Content -Raw onboarding-wizard.js
   $api = Get-Content -Raw api/alpaca-paper.js
   if ($onboarding -notmatch "Paper and research only") { Write-Error "Missing first-run paper/research setup wizard"; exit 1 }
   if ($onboarding -notmatch "Do not show again") { Write-Error "Missing setup wizard dismissal control"; exit 1 }
+  if ($live -notmatch "Manual Live Order Ticket") { Write-Error "Missing manual live order ticket"; exit 1 }
+  if ($live -notmatch "AI/autopilot cannot submit live trades") { Write-Error "Missing AI/autopilot live-trade block wording"; exit 1 }
+  if ($live -match "ALPACA_LIVE_KEY|ALPACA_LIVE_SECRET") { Write-Error "Live key variable names should not be stored in browser code"; exit 1 }
+  if ($liveApi -notmatch "manualSubmission !== true") { Write-Error "Missing backend manual-submission gate"; exit 1 }
   if ($broker -notmatch "Paper setup wizard") { Write-Error "Missing Alpaca setup wizard"; exit 1 }
   if ($api -notmatch "paper-api\.alpaca\.markets") { Write-Error "Missing paper-only Alpaca base check"; exit 1 }
 }

@@ -8,6 +8,7 @@
     "test": "node tools/check-syntax.mjs",
     "test:syntax": "node tools/check-syntax.mjs",
     "test:ui": "node tools/browser-ui-smoke.mjs",
+    "test:governance": "node tools/check-governance.mjs",
     "qa:fallback": "powershell -ExecutionPolicy Bypass -File tools/qa-fallback.ps1",
     "test:smoke": "node tools/smoke-live.mjs",
     "release:manifest": "node tools/release-manifest.mjs"
