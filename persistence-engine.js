@@ -25,7 +25,8 @@
     ['guided_workflow', null],
     ['live_broker_logs', []],
     ['live_trading_acknowledged', null],
-    ['trading_mode_control', null]
+    ['trading_mode_control', null],
+    ['release_readiness', null]
   ];
   const KEY_SET = new Set(KEYS.map(([name]) => `${PREFIX}${name}`));
   const ARRAY_KEYS = new Set(KEYS.filter(([, fallback]) => Array.isArray(fallback)).map(([name]) => name));
@@ -106,7 +107,7 @@
       app: 'Trader Command Center',
       reason,
       exportedAt: new Date().toISOString(),
-      safety: 'paper/research by default; optional manual live ticket logs may exist; not investment advice; no API keys or secrets included',
+      safety: 'paper only, research only, not investment advice, no real-money order was sent',
       keys: KEYS.map(([name]) => name),
       data: collectData()
     };
@@ -267,9 +268,9 @@
       ['Playbooks', 'playbooks'],
       ['AI plans', 'ai_plans'],
       ['Broker logs', 'broker_logs'],
-      ['Live logs', 'live_broker_logs'],
       ['Reports', 'validation_report'],
-      ['Workflow', 'guided_workflow']
+      ['Workflow', 'guided_workflow'],
+      ['Release readiness', 'release_readiness']
     ].map(([label, name]) => `<span>${label}: ${dataCount(name)}</span>`).join('');
   }
 
@@ -294,9 +295,9 @@
         <button id="persistPush" type="button">Save to Supabase if configured</button>
       </div>
       <div class="persist-steps">
-        <div><strong>1. Default mode needs no account.</strong><p class="muted">If Supabase is missing, keep using the app normally. Your watchlist, journal, checks, outcomes, playbooks, AI plans, logs, chart proof, guided workflow state, and reports stay in this browser.</p></div>
+        <div><strong>1. Default mode needs no account.</strong><p class="muted">If Supabase is missing, keep using the app normally. Your watchlist, journal, checks, outcomes, playbooks, AI plans, logs, chart proof, guided workflow state, release readiness state, and reports stay in this browser.</p></div>
         <div><strong>2. Optional Supabase setup.</strong><p class="muted">Create a Supabase table named trader_persistence with columns id text primary key, payload jsonb, updated_at timestamptz. On Vercel, add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY. Optional: TRADER_PERSISTENCE_KEY.</p></div>
-        <div><strong>3. Keep secrets server-side.</strong><p class="muted">Never paste service keys into the browser. This panel only calls /api/persistence. Trading remains paper only and research only.</p></div>
+        <div><strong>3. Keep secrets server-side.</strong><p class="muted">Never paste service keys into the browser. This panel only calls /api/persistence. Trading remains paper only and research only unless you intentionally configure separate manual live gates.</p></div>
       </div>
       <p id="persistSync" class="muted">Checking persistence status...</p>
       <div id="persistMessage" class="list"></div>`;
