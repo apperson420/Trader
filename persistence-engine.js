@@ -21,7 +21,8 @@
     ['chat_messages', []],
     ['chat_learning', []],
     ['free_tools_registry', []],
-    ['setup_wizard', null]
+    ['setup_wizard', null],
+    ['guided_workflow', null]
   ];
   const KEY_SET = new Set(KEYS.map(([name]) => `${PREFIX}${name}`));
   const ARRAY_KEYS = new Set(KEYS.filter(([, fallback]) => Array.isArray(fallback)).map(([name]) => name));
@@ -263,7 +264,8 @@
       ['Playbooks', 'playbooks'],
       ['AI plans', 'ai_plans'],
       ['Broker logs', 'broker_logs'],
-      ['Reports', 'validation_report']
+      ['Reports', 'validation_report'],
+      ['Workflow', 'guided_workflow']
     ].map(([label, name]) => `<span>${label}: ${dataCount(name)}</span>`).join('');
   }
 
@@ -288,7 +290,7 @@
         <button id="persistPush" type="button">Save to Supabase if configured</button>
       </div>
       <div class="persist-steps">
-        <div><strong>1. Default mode needs no account.</strong><p class="muted">If Supabase is missing, keep using the app normally. Your watchlist, journal, checks, outcomes, playbooks, AI plans, logs, chart proof, and reports stay in this browser.</p></div>
+        <div><strong>1. Default mode needs no account.</strong><p class="muted">If Supabase is missing, keep using the app normally. Your watchlist, journal, checks, outcomes, playbooks, AI plans, logs, chart proof, guided workflow state, and reports stay in this browser.</p></div>
         <div><strong>2. Optional Supabase setup.</strong><p class="muted">Create a Supabase table named trader_persistence with columns id text primary key, payload jsonb, updated_at timestamptz. On Vercel, add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY. Optional: TRADER_PERSISTENCE_KEY.</p></div>
         <div><strong>3. Keep secrets server-side.</strong><p class="muted">Never paste service keys into the browser. This panel only calls /api/persistence. Trading remains paper only and research only.</p></div>
       </div>
