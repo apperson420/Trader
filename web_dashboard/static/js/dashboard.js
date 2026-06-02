@@ -107,8 +107,14 @@ function renderStatus(payload) {
     renderGuidance(strategyAck, heartbeat);
 
     document.querySelectorAll('[data-strategy]').forEach(button => {
-        button.classList.toggle('active', button.dataset.strategy === strategy);
+        const isActive = button.dataset.strategy === strategy;
+        button.classList.toggle('active', isActive);
         button.disabled = false;
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        const stateNode = button.querySelector('.strategy-button-state');
+        if (stateNode) {
+            stateNode.textContent = isActive ? 'Active' : 'Switch';
+        }
     });
 }
 
