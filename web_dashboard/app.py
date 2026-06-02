@@ -1,4 +1,4 @@
-# BTC Sovereign v1.5 - Web Dashboard Control Center
+# BTC Sovereign v1.6 - Web Dashboard Control Center
 """
 Flask control center for BTC Sovereign / Trader.
 
@@ -27,11 +27,49 @@ app = Flask(
 )
 
 
+def _strategy_acknowledgement(state: Dict[str, Any]) -> Dict[str, Any]:
+    """Return a clear dashboard-safe acknowledgement summary."""
+    runtime = state.get("runtime", {}) if isinstance(state.get("runtime"), dict) else {}
+    requested_strategy = state.get("strategy", "auto")
+    requested_version = int(state.get("version") or 0)
+    applied_strategy = runtime.get("bot_strategy")
+    applied_version = int(runtime.get("last_applied_version") or 0)
+    bot_running = bool(runtime.get("bot_running"))
+    acknowledged = applied_strategy == requested_strategy and applied_version == requested_version
+
+    if acknowledged:
+        status = "applied_by_bot"
+        label = "Applied by bot"
+        detail = f"SovereignBot applied {requested_strategy} at version {requested_version}."
+    elif bot_running:
+        status = "pending_bot_acknowledgment"
+        label = "Pending bot acknowledgment"
+        detail = f"Waiting for SovereignBot to apply {requested_strategy} version {requested_version}."
+    else:
+        status = "pending_bot_offline"
+        label = "Pending — bot offline"
+        detail = "Start the runtime with python run.py all so SovereignBot can apply the latest strategy."
+
+    return {
+        "acknowledged": acknowledged,
+        "status": status,
+        "label": label,
+        "detail": detail,
+        "requested_strategy": requested_strategy,
+        "requested_version": requested_version,
+        "applied_strategy": applied_strategy,
+        "applied_version": applied_version,
+        "bot_running": bot_running,
+        "bot_acknowledged_at": state.get("bot_acknowledged_at") or runtime.get("last_heartbeat_at"),
+    }
+
+
 def _dashboard_payload() -> Dict[str, Any]:
     config = load_config()
     state = shared_state.get_strategy_state(config.get("default_strategy", "auto"))
     strategy = state.get("strategy", "auto")
     runtime = state.get("runtime", {})
+    strategy_ack = _strategy_acknowledgement(state)
     risk_guardrails = {
         "mode": state.get("mode", config.get("mode", "paper")),
         "real_money_trading": "disabled_by_default",
@@ -46,6 +84,7 @@ def _dashboard_payload() -> Dict[str, Any]:
         "system": "BTC Sovereign Trader",
         "interface": "web_dashboard",
         "strategy": strategy,
+        "strategy_ack": strategy_ack,
         "allowed_strategies": list(shared_state.ALLOWED_STRATEGIES),
         "state": state,
         "runtime": runtime,
@@ -89,8 +128,7 @@ def switch_strategy():
         return jsonify({"ok": False, "status": "error", "error": f"Could not persist strategy state: {exc}"}), 500
 
     runtime = state.get("runtime", {})
-    bot_strategy = runtime.get("bot_strategy")
-    pending = bot_strategy != state["strategy"] or runtime.get("last_applied_version") != state.get("version")
+    strategy_ack = _strategy_acknowledgement(state)
 
     return jsonify(
         {
@@ -101,7 +139,8 @@ def switch_strategy():
                 "Running bot will apply it on the next sync cycle."
             ),
             "new_strategy": state["strategy"],
-            "pending_bot_ack": pending,
+            "pending_bot_ack": not strategy_ack["acknowledged"],
+            "strategy_ack": strategy_ack,
             "state": state,
             "runtime": runtime,
         }
