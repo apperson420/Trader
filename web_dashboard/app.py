@@ -1,4 +1,4 @@
-# BTC Sovereign v1.3 - Web Dashboard Control Center
+# BTC Sovereign v1.4 - Web Dashboard Control Center
 """
 Flask control center for BTC Sovereign / Trader.
 
@@ -17,6 +17,7 @@ from typing import Any, Dict
 from flask import Flask, Response, jsonify, render_template, request
 
 import shared_state
+from sovereign_bot import load_config
 
 APP_ROOT = Path(__file__).resolve().parent
 app = Flask(
@@ -27,14 +28,18 @@ app = Flask(
 
 
 def _dashboard_payload() -> Dict[str, Any]:
-    state = shared_state.get_strategy_state()
+    config = load_config()
+    state = shared_state.get_strategy_state(config.get("default_strategy", "auto"))
     strategy = state.get("strategy", "auto")
+    runtime = state.get("runtime", {})
     risk_guardrails = {
-        "mode": state.get("mode", "paper"),
+        "mode": state.get("mode", config.get("mode", "paper")),
         "real_money_trading": "disabled_by_default",
         "approval_required": True,
         "max_risk_note": "Use paper mode and define stop loss before any real-money upgrade.",
         "state_file": str(shared_state.STATE_FILE),
+        "audit_file": str(shared_state.AUDIT_FILE),
+        "max_risk_per_trade_percent": config.get("risk", {}).get("max_risk_per_trade_percent", 1.0),
     }
     return {
         "ok": True,
@@ -43,18 +48,21 @@ def _dashboard_payload() -> Dict[str, Any]:
         "strategy": strategy,
         "allowed_strategies": list(shared_state.ALLOWED_STRATEGIES),
         "state": state,
+        "runtime": runtime,
         "risk": risk_guardrails,
         "status": state.get("status", "ready"),
         "message": state.get("message", "Dashboard ready."),
+        "config_version": config.get("version", "unknown"),
     }
 
 
 @app.route("/")
 def index():
+    payload = _dashboard_payload()
     return render_template(
         "index.html",
-        payload=_dashboard_payload(),
-        allowed_strategies=shared_state.ALLOWED_STRATEGIES,
+        payload=payload,
+        allowed_strategies=payload["allowed_strategies"],
     )
 
 
@@ -86,6 +94,7 @@ def switch_strategy():
             "message": f"Strategy switch saved: {state['strategy']}. Running bot will apply it on next sync/poll.",
             "new_strategy": state["strategy"],
             "state": state,
+            "runtime": state.get("runtime", {}),
         }
     )
 
@@ -106,4 +115,11 @@ def events():
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5055, debug=False, threaded=True)
+    config = load_config()
+    dashboard = config.get("dashboard", {})
+    app.run(
+        host=dashboard.get("host", "127.0.0.1"),
+        port=int(dashboard.get("port", 5055)),
+        debug=False,
+        threaded=True,
+    )
