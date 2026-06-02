@@ -166,9 +166,15 @@ code {
 .risk-list,
 .status-chip span,
 .guidance-card p,
+.section-help,
+.strategy-button-description,
 footer {
   color: #9fb0c6;
   line-height: 1.55;
+}
+
+.section-help {
+  margin: 6px 0 0;
 }
 
 .guidance-card {
@@ -287,8 +293,57 @@ button {
   background: linear-gradient(135deg, #4cc9f0, #a7f3d0);
 }
 
-button.active {
+button:focus-visible {
+  outline: 4px solid #edf6ff;
+  outline-offset: 3px;
+}
+
+.strategy-button {
+  display: grid;
+  gap: 6px;
+  min-height: 128px;
+  text-align: left;
+  align-content: start;
+  background: rgba(255, 255, 255, .06);
+  color: #edf6ff;
+  border: 1px solid rgba(255, 255, 255, .14);
+}
+
+.strategy-button:hover {
+  border-color: rgba(167, 243, 208, .7);
+  transform: translateY(-1px);
+}
+
+.strategy-button-title {
+  font-size: 18px;
+}
+
+.strategy-button-description {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.strategy-button-state {
+  align-self: end;
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 4px;
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 12px;
+  background: rgba(255, 255, 255, .10);
+  color: #a7f3d0;
+}
+
+button.active,
+.strategy-button.active {
   outline: 3px solid #edf6ff;
+  border-color: rgba(167, 243, 208, .95);
+  background: linear-gradient(135deg, rgba(76, 201, 240, .26), rgba(167, 243, 208, .20));
+}
+
+.strategy-button.active .strategy-button-state {
+  background: rgba(167, 243, 208, .18);
 }
 
 button:disabled {
