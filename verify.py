@@ -6,6 +6,7 @@ Checks:
 - shared_state strategy validation and rejection
 - dashboard-to-bot strategy synchronization without placing trades
 - heartbeat and acknowledgement status
+- dashboard template/JS contract for critical live status IDs
 - corrupted shared-state recovery
 """
 
@@ -16,6 +17,53 @@ import json
 import os
 import tempfile
 from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parent
+TEMPLATE_FILE = ROOT / "web_dashboard" / "templates" / "index.html"
+DASHBOARD_JS_FILE = ROOT / "web_dashboard" / "static" / "js" / "dashboard.js"
+
+
+EXPECTED_DASHBOARD_IDS = (
+    "activeStrategy",
+    "strategyAckCard",
+    "strategyAckLabel",
+    "strategyAckDetail",
+    "heartbeatCard",
+    "heartbeatLabel",
+    "heartbeatDetail",
+    "riskCard",
+    "riskStatus",
+    "maxRiskInline",
+    "operatorGuidance",
+    "operatorGuidanceTitle",
+    "operatorGuidanceDetail",
+    "botRunning",
+    "requestedStrategy",
+    "appliedStrategy",
+    "heartbeatAge",
+    "lastUpdated",
+    "switchResult",
+    "maxRisk",
+    "updatedBy",
+    "previousStrategy",
+    "strategyAckStatus",
+    "botStrategy",
+    "heartbeatStatus",
+    "botHeartbeat",
+    "stateVersion",
+    "auditFile",
+    "sseStatus",
+)
+
+
+EXPECTED_STRATEGIES = (
+    "auto",
+    "trend",
+    "mean_reversion",
+    "breakout",
+    "momentum",
+)
 
 
 def reload_runtime_modules():
@@ -29,8 +77,30 @@ def reload_runtime_modules():
     return shared_state, sovereign_bot, dashboard_app
 
 
+def verify_dashboard_ui_contract() -> None:
+    print("\n[1] Dashboard UI contract")
+    template = TEMPLATE_FILE.read_text(encoding="utf-8")
+    dashboard_js = DASHBOARD_JS_FILE.read_text(encoding="utf-8")
+
+    for element_id in EXPECTED_DASHBOARD_IDS:
+        assert f'id="{element_id}"' in template, f"Missing dashboard element id: {element_id}"
+
+    for strategy in EXPECTED_STRATEGIES:
+        assert f"'{strategy}'" in template, f"Missing strategy description entry: {strategy}"
+
+    assert 'data-strategy="{{ strategy }}"' in template, "Strategy buttons must expose data-strategy."
+    assert "aria-pressed" in template, "Strategy buttons must expose aria-pressed."
+    assert "strategy-button-state" in template, "Strategy buttons must show Active/Switch state."
+    assert "querySelectorAll('[data-strategy]')" in dashboard_js, "JS must update all strategy buttons."
+    assert "aria-pressed" in dashboard_js, "JS must keep aria-pressed synchronized."
+    assert "strategy-button-state" in dashboard_js, "JS must keep Active/Switch labels synchronized."
+    assert "operatorGuidance" in dashboard_js, "JS must update operator guidance."
+
+    print("  Dashboard IDs, strategy cards, ARIA state, and live JS hooks are present")
+
+
 def verify_dashboard_to_bot_flow(shared_state, sovereign_bot, dashboard_app) -> None:
-    print("\n[1] Dashboard -> shared_state -> SovereignBot flow")
+    print("\n[2] Dashboard -> shared_state -> SovereignBot flow")
     bot = sovereign_bot.SovereignBot({"mode": "paper", "default_strategy": "auto"})
     assert bot.current_strategy == "auto", "Bot should start on auto"
 
@@ -59,7 +129,7 @@ def verify_dashboard_to_bot_flow(shared_state, sovereign_bot, dashboard_app) -> 
 
 
 def verify_invalid_strategy_rejected(shared_state, dashboard_app) -> None:
-    print("\n[2] Invalid strategy rejection")
+    print("\n[3] Invalid strategy rejection")
     client = dashboard_app.app.test_client()
     response = client.post("/api/switch-strategy", json={"strategy": "not_allowed"})
     assert response.status_code == 400
@@ -70,7 +140,7 @@ def verify_invalid_strategy_rejected(shared_state, dashboard_app) -> None:
 
 
 def verify_corrupted_state_recovery(shared_state) -> None:
-    print("\n[3] Corrupted shared-state recovery")
+    print("\n[4] Corrupted shared-state recovery")
     Path(os.environ["BTC_SOVEREIGN_STATE_FILE"]).write_text("{broken json", encoding="utf-8")
     state = shared_state.get_strategy_state()
     assert state["strategy"] == "auto"
@@ -89,6 +159,7 @@ def main() -> None:
 
         shared_state, sovereign_bot, dashboard_app = reload_runtime_modules()
 
+        verify_dashboard_ui_contract()
         verify_dashboard_to_bot_flow(shared_state, sovereign_bot, dashboard_app)
         verify_invalid_strategy_rejected(shared_state, dashboard_app)
         verify_corrupted_state_recovery(shared_state)
@@ -96,7 +167,7 @@ def main() -> None:
         log_text = Path(os.environ["BTC_SOVEREIGN_LOG_FILE"]).read_text(encoding="utf-8")
         assert "Strategy switch requested" in log_text
         assert "Strategy acknowledged" in log_text
-        print("\n[4] Log verification")
+        print("\n[5] Log verification")
         print("  Important strategy events were written to logs/sovereign_bot.log")
 
     print("\nAll verification checks passed.")
