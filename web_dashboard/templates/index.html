@@ -75,19 +75,30 @@
           <div>
             <span class="label">Strategy Quick Switch</span>
             <h3>Choose the active paper strategy</h3>
+            <p class="section-help">These buttons only change the selected paper strategy. They do not place trades.</p>
           </div>
           <span id="lastUpdated" class="pill">{{ payload.state.updated_at or 'not switched yet' }}</span>
         </div>
 
         <div class="strategy-grid" role="group" aria-label="Strategy quick switch buttons">
+          {% set strategy_descriptions = {
+            'auto': 'Let the system choose from available paper strategies.',
+            'trend': 'Follow stronger directional market moves.',
+            'mean_reversion': 'Watch for moves back toward an average.',
+            'breakout': 'Watch for price breaking out of a range.',
+            'momentum': 'Follow strong short-term movement.'
+          } %}
           {% for strategy in allowed_strategies %}
           <button
             class="strategy-button{% if strategy == payload.strategy %} active{% endif %}"
             type="button"
             data-strategy="{{ strategy }}"
+            aria-pressed="{{ 'true' if strategy == payload.strategy else 'false' }}"
             onclick="switchStrategy('{{ strategy }}')"
           >
-            {{ strategy.replace('_', ' ').title() }}
+            <span class="strategy-button-title">{{ strategy.replace('_', ' ').title() }}</span>
+            <span class="strategy-button-description">{{ strategy_descriptions.get(strategy, 'Switch to this paper strategy.') }}</span>
+            <span class="strategy-button-state">{{ 'Active' if strategy == payload.strategy else 'Switch' }}</span>
           </button>
           {% endfor %}
         </div>
