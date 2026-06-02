@@ -26,4 +26,6 @@ $('journalForm').addEventListener('submit',event=>{event.preventDefault();const 
 $('clearJournal').addEventListener('click',()=>{store.journal=[];renderJournal();updateCounts()});
 document.addEventListener('trader:persistence-restored',()=>{renderWatchlist();renderJournal();restoreChecklist();calculateRisk();updateCounts();updateSmartScore(false)});
 renderWatchlist();renderJournal();restoreChecklist();calculateRisk();updateCounts();updateSmartScore(true);
-['autonomous-engine.js','ai-brain.js','market-intel.js','ai-chat.js','free-tools-hub.js','paper-broker.js','chart-engine.js','professional-governor.js','century-evolution.js','strategy-validation.js','onboarding-wizard.js','layout-polish.js','live-trading-control.js','mode-control-center.js','release-readiness-center.js','setup-status-center.js'].forEach(src=>{const s=document.createElement('script');s.src='./'+src;document.body.appendChild(s)});
+[
+  'autonomous-engine.js','ai-brain.js','market-intel.js','ai-chat.js','free-tools-hub.js','paper-broker.js','chart-engine.js','professional-governor.js','century-evolution.js','strategy-validation.js','onboarding-wizard.js','layout-polish.js','live-trading-control.js','mode-control-center.js','release-readiness-center.js','setup-status-center.js','guided-workflow.js','evolve.js','scenario-lab.js','kid-coach.js'
+].forEach(src=>{if(document.querySelector(`script[src="./${src}"]`))return;const s=document.createElement('script');s.src='./'+src;s.dataset.traderModule='true';document.body.appendChild(s)});
