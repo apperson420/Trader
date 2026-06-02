@@ -25,6 +25,7 @@ const requiredHtml = [
 
 const requiredFiles = [
   'paper-broker.js',
+  'onboarding-wizard.js',
   'persistence-engine.js',
   'api/alpaca-paper.js',
   'api/persistence.js'
@@ -167,6 +168,11 @@ async function tryPlaywrightSmoke() {
       const journal = document.getElementById('journalList');
       return Boolean(watchlist?.textContent.trim() && journal?.textContent.trim());
     });
+    await page.waitForSelector('#setupWizardOpen');
+    await page.waitForFunction(() => document.getElementById('setupWizard')?.classList.contains('setup-open'));
+    const wizardVisible = await page.evaluate(() => document.getElementById('setupWizard')?.classList.contains('setup-open'));
+    if (!wizardVisible) fail('first-run setup wizard did not open for a new browser session');
+    await page.click('#setupWizardLater');
     await page.click('#clearWatchlist');
     await page.click('#clearJournal');
     const before = await page.evaluate(() => ({
@@ -228,6 +234,7 @@ for (const file of requiredFiles) {
 const broker = readFileSync(resolve(root, 'paper-broker.js'), 'utf8');
 const brokerApi = readFileSync(resolve(root, 'api/alpaca-paper.js'), 'utf8');
 const persistence = readFileSync(resolve(root, 'persistence-engine.js'), 'utf8');
+const onboarding = readFileSync(resolve(root, 'onboarding-wizard.js'), 'utf8');
 const autonomy = readFileSync(resolve(root, 'autonomous-engine.js'), 'utf8');
 const hub = readFileSync(resolve(root, 'free-tools-hub.js'), 'utf8');
 
@@ -238,6 +245,8 @@ const behaviorChecks = [
   ['Full backup export present', persistence.includes('Export full backup JSON')],
   ['Backup import present', persistence.includes('Import backup JSON')],
   ['Supabase fallback message present', persistence.includes('LocalStorage fallback is active')],
+  ['First-run setup wizard present', onboarding.includes('Start safely in 10 minutes') && onboarding.includes('Do not show again')],
+  ['Setup wizard stays paper/research scoped', onboarding.includes('No real-money trades are sent') && onboarding.includes('not investment advice')],
   ['Autonomy panel states current limits, not roadmap stages', autonomy.includes('Autonomy safety limits') && !autonomy.includes('Autonomy roadmap')],
   ['Tool hub avoids fake live integration copy', hub.includes('What is live, setup-ready, or external') && !hub.includes('represented in the product plan')]
 ];

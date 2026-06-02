@@ -26,6 +26,7 @@ const manifest = {
     'Paper broker control center',
     'Alpaca paper setup wizard with server-side environment checks',
     'Browser/UI smoke fallback for npm-missing QA',
+    'First-run setup wizard with beginner-safe product guidance',
     'Professional chart engine',
     'Supabase-ready persistence with localStorage fallback and full JSON backup',
     'Full free tools integration hub',

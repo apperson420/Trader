@@ -49,6 +49,7 @@ if ($nodeOk) {
   $required = @(
     "index.html",
     "app.js",
+    "onboarding-wizard.js",
     "paper-broker.js",
     "persistence-engine.js",
     "api/alpaca-paper.js",
@@ -63,7 +64,10 @@ if ($nodeOk) {
     Write-Host "OK file exists: $file"
   }
   $broker = Get-Content -Raw paper-broker.js
+  $onboarding = Get-Content -Raw onboarding-wizard.js
   $api = Get-Content -Raw api/alpaca-paper.js
+  if ($onboarding -notmatch "Paper and research only") { Write-Error "Missing first-run paper/research setup wizard"; exit 1 }
+  if ($onboarding -notmatch "Do not show again") { Write-Error "Missing setup wizard dismissal control"; exit 1 }
   if ($broker -notmatch "Paper setup wizard") { Write-Error "Missing Alpaca setup wizard"; exit 1 }
   if ($api -notmatch "paper-api\.alpaca\.markets") { Write-Error "Missing paper-only Alpaca base check"; exit 1 }
 }

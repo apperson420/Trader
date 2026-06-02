@@ -20,7 +20,8 @@
     ['auto_logs', []],
     ['chat_messages', []],
     ['chat_learning', []],
-    ['free_tools_registry', []]
+    ['free_tools_registry', []],
+    ['setup_wizard', null]
   ];
   const KEY_SET = new Set(KEYS.map(([name]) => `${PREFIX}${name}`));
   const ARRAY_KEYS = new Set(KEYS.filter(([, fallback]) => Array.isArray(fallback)).map(([name]) => name));
