@@ -26,15 +26,14 @@
           <span class="badge">System Overview</span>
           <h2>Current strategy: <span id="activeStrategy">{{ payload.strategy }}</span></h2>
           <p>
-            Dashboard strategy switches are written to the shared state file. The running SovereignBot should poll
-            <code>shared_state.get_current_strategy()</code> or call <code>shared_state.sync_strategy_to_bot(bot)</code>
-            inside its loop to apply the latest dashboard selection.
+            Dashboard strategy switches are written to the shared state file. A running SovereignBot launched with
+            <code>python run.py all</code> or <code>python run.py bot</code> applies the latest selection automatically.
           </p>
         </div>
         <div class="overview-grid">
           <article><span>Mode</span><strong id="paperMode">{{ payload.risk.mode }}</strong></article>
           <article><span>Live Trading</span><strong>Disabled</strong></article>
-          <article><span>Approval Gates</span><strong>Required</strong></article>
+          <article><span>Bot Running</span><strong id="botRunning">{{ payload.runtime.bot_running }}</strong></article>
           <article><span>State Version</span><strong id="stateVersion">{{ payload.state.version }}</strong></article>
         </div>
       </section>
@@ -62,7 +61,7 @@
         </div>
 
         <div id="switchResult" class="result-box" aria-live="polite">
-          Ready. No real trades are placed from this dashboard.
+          Ready. Strategy switches update runtime state only; no real trades are placed from this dashboard.
         </div>
       </section>
 
@@ -79,6 +78,7 @@
             <li>Every broker or money-moving action still needs explicit approval gates.</li>
             <li>Use stop loss, position sizing, fees, slippage, and tax notes before real execution.</li>
             <li>Strategy switches affect selection only; they are not buy/sell orders.</li>
+            <li>Configured max risk per trade: <strong id="maxRisk">{{ payload.risk.max_risk_per_trade_percent }}%</strong>.</li>
           </ul>
         </article>
 
@@ -93,7 +93,10 @@
           <div class="sync-table">
             <div><span>Updated by</span><strong id="updatedBy">{{ payload.state.updated_by }}</strong></div>
             <div><span>Previous strategy</span><strong id="previousStrategy">{{ payload.state.previous_strategy or 'none' }}</strong></div>
+            <div><span>Bot strategy</span><strong id="botStrategy">{{ payload.runtime.bot_strategy }}</strong></div>
+            <div><span>Heartbeat</span><strong id="botHeartbeat">{{ payload.runtime.last_heartbeat_at or 'not started' }}</strong></div>
             <div><span>State file</span><strong id="stateFile">{{ payload.risk.state_file }}</strong></div>
+            <div><span>Audit file</span><strong id="auditFile">{{ payload.risk.audit_file }}</strong></div>
           </div>
         </article>
       </section>
