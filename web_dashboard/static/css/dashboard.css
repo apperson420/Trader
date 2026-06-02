@@ -19,12 +19,12 @@ footer {
 .topbar {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 20;
   display: grid;
   grid-template-columns: 1fr 340px;
   gap: 18px;
   align-items: stretch;
-  padding: 18px 0;
+  padding: 14px 0 10px;
   background: rgba(8, 17, 31, .96);
   backdrop-filter: blur(10px);
 }
@@ -37,13 +37,13 @@ p {
 }
 
 h1 {
-  font-size: clamp(34px, 5vw, 58px);
-  margin-bottom: 10px;
+  font-size: clamp(32px, 4vw, 52px);
+  margin-bottom: 8px;
 }
 
 h2 {
-  font-size: clamp(28px, 4vw, 46px);
-  margin-bottom: 12px;
+  font-size: clamp(28px, 4vw, 44px);
+  margin-bottom: 10px;
 }
 
 h3 {
@@ -70,16 +70,28 @@ code {
 }
 
 .overview {
+  position: sticky;
+  top: 132px;
+  z-index: 12;
   display: grid;
-  grid-template-columns: 1.2fr .8fr;
+  grid-template-columns: 1.35fr .65fr;
   gap: 18px;
-  align-items: center;
+  align-items: stretch;
+  border-color: rgba(167, 243, 208, .24);
+  background: linear-gradient(180deg, rgba(15, 27, 48, .98), rgba(15, 27, 48, .94));
+  backdrop-filter: blur(10px);
+}
+
+.overview-primary {
+  display: grid;
+  align-content: start;
 }
 
 .overview-grid,
 .grid,
 .strategy-grid,
-.sync-table {
+.sync-table,
+.status-strip {
   display: grid;
   gap: 12px;
 }
@@ -88,16 +100,38 @@ code {
   grid-template-columns: repeat(2, 1fr);
 }
 
+.status-strip {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 8px 0 4px;
+}
+
 .overview-grid article,
 .sync-table div,
 .result-box,
-.ack-banner {
+.status-chip {
   border: 1px solid rgba(255, 255, 255, .14);
   background: rgba(255, 255, 255, .045);
   border-radius: 16px;
   padding: 14px;
 }
 
+.status-chip {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  min-height: 118px;
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  margin-top: 9px;
+  background: #94a3b8;
+  box-shadow: 0 0 0 4px rgba(148, 163, 184, .12);
+}
+
+.status-chip small,
 .overview-grid span,
 .sync-table span,
 .label,
@@ -112,10 +146,10 @@ code {
 .overview-grid strong,
 .sync-table strong,
 .status-card strong,
-.ack-banner strong {
+.status-chip strong {
   display: block;
   margin-top: 6px;
-  font-size: 22px;
+  font-size: 21px;
   overflow-wrap: anywhere;
 }
 
@@ -128,40 +162,64 @@ code {
 .status-card small,
 .muted,
 .risk-list,
-.ack-banner span,
+.status-chip span,
 footer {
   color: #9fb0c6;
-  line-height: 1.6;
+  line-height: 1.55;
 }
 
-.ack-banner {
-  margin: 12px 0 16px;
-}
-
-.ack-banner.applied_by_bot,
-.ack-banner.heartbeat-healthy {
+.status-chip.applied_by_bot,
+.status-chip.heartbeat-healthy,
+.status-chip.risk-paper {
   border-color: rgba(167, 243, 208, .75);
   background: rgba(34, 197, 94, .12);
 }
 
-.ack-banner.pending_bot_acknowledgment {
+.status-chip.applied_by_bot .status-dot,
+.status-chip.heartbeat-healthy .status-dot,
+.status-chip.risk-paper .status-dot {
+  background: #a7f3d0;
+  box-shadow: 0 0 0 4px rgba(167, 243, 208, .16);
+}
+
+.status-chip.pending_bot_acknowledgment {
   border-color: rgba(76, 201, 240, .85);
   background: rgba(76, 201, 240, .10);
 }
 
-.ack-banner.pending_bot_offline,
-.ack-banner.heartbeat-not_started,
-.ack-banner.heartbeat-stopped,
-.ack-banner.heartbeat-stale {
+.status-chip.pending_bot_acknowledgment .status-dot {
+  background: #4cc9f0;
+  box-shadow: 0 0 0 4px rgba(76, 201, 240, .16);
+}
+
+.status-chip.pending_bot_offline,
+.status-chip.heartbeat-not_started,
+.status-chip.heartbeat-stopped,
+.status-chip.heartbeat-stale {
   border-color: rgba(251, 191, 36, .85);
   background: rgba(251, 191, 36, .10);
 }
 
-.ack-banner.unknown,
-.ack-banner.heartbeat-error,
-.ack-banner.heartbeat-unknown {
+.status-chip.pending_bot_offline .status-dot,
+.status-chip.heartbeat-not_started .status-dot,
+.status-chip.heartbeat-stopped .status-dot,
+.status-chip.heartbeat-stale .status-dot {
+  background: #fbbf24;
+  box-shadow: 0 0 0 4px rgba(251, 191, 36, .16);
+}
+
+.status-chip.unknown,
+.status-chip.heartbeat-error,
+.status-chip.heartbeat-unknown {
   border-color: rgba(248, 113, 113, .8);
   background: rgba(248, 113, 113, .10);
+}
+
+.status-chip.unknown .status-dot,
+.status-chip.heartbeat-error .status-dot,
+.status-chip.heartbeat-unknown .status-dot {
+  background: #f87171;
+  box-shadow: 0 0 0 4px rgba(248, 113, 113, .16);
 }
 
 .badge,
@@ -181,6 +239,11 @@ footer {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 16px;
+}
+
+.action-panel,
+.compact-panel {
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .22);
 }
 
 .strategy-grid {
@@ -236,6 +299,16 @@ footer {
   text-align: center;
 }
 
+@media (max-width: 1000px) {
+  .status-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .overview {
+    top: 120px;
+  }
+}
+
 @media (max-width: 900px) {
   .topbar,
   .overview,
@@ -245,7 +318,8 @@ footer {
     grid-template-columns: 1fr;
   }
 
-  .topbar {
+  .topbar,
+  .overview {
     position: static;
   }
 }
