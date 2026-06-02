@@ -1,8 +1,108 @@
-<div class="strategy-switch">
-  <h4>Quick Strategy Switch</h4>
-  <button onclick="switchStrategy('trend')">Trend</button>
-  <button onclick="switchStrategy('mean_reversion')">Mean Reversion</button>
-  <button onclick="switchStrategy('breakout')">Breakout</button>
-  <button onclick="switchStrategy('momentum')">Momentum</button>
-  <button onclick="switchStrategy('auto')">Auto</button>
-</div>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BTC Sovereign Control Center</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">BTC Sovereign • Finance/Trading Tool</p>
+        <h1>Web Dashboard Control Center</h1>
+        <p class="muted">Primary interface for strategy control, runtime status, and paper-first risk visibility.</p>
+      </div>
+      <div class="status-card">
+        <span class="label">Runtime Status</span>
+        <strong id="runtimeStatus">{{ payload.status }}</strong>
+        <small id="runtimeMessage">{{ payload.message }}</small>
+      </div>
+    </header>
+
+    <main class="shell">
+      <section class="overview panel" aria-label="System overview">
+        <div>
+          <span class="badge">System Overview</span>
+          <h2>Current strategy: <span id="activeStrategy">{{ payload.strategy }}</span></h2>
+          <p>
+            Dashboard strategy switches are written to the shared state file. The running SovereignBot should poll
+            <code>shared_state.get_current_strategy()</code> or call <code>shared_state.sync_strategy_to_bot(bot)</code>
+            inside its loop to apply the latest dashboard selection.
+          </p>
+        </div>
+        <div class="overview-grid">
+          <article><span>Mode</span><strong id="paperMode">{{ payload.risk.mode }}</strong></article>
+          <article><span>Live Trading</span><strong>Disabled</strong></article>
+          <article><span>Approval Gates</span><strong>Required</strong></article>
+          <article><span>State Version</span><strong id="stateVersion">{{ payload.state.version }}</strong></article>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <span class="label">Strategy Quick Switch</span>
+            <h3>Choose the active strategy</h3>
+          </div>
+          <span id="lastUpdated" class="pill">{{ payload.state.updated_at or 'not switched yet' }}</span>
+        </div>
+
+        <div class="strategy-grid" role="group" aria-label="Strategy quick switch buttons">
+          {% for strategy in allowed_strategies %}
+          <button
+            class="strategy-button{% if strategy == payload.strategy %} active{% endif %}"
+            type="button"
+            data-strategy="{{ strategy }}"
+            onclick="switchStrategy('{{ strategy }}')"
+          >
+            {{ strategy.replace('_', ' ').title() }}
+          </button>
+          {% endfor %}
+        </div>
+
+        <div id="switchResult" class="result-box" aria-live="polite">
+          Ready. No real trades are placed from this dashboard.
+        </div>
+      </section>
+
+      <section class="grid two">
+        <article class="panel">
+          <div class="section-head">
+            <div>
+              <span class="label">Risk Visibility</span>
+              <h3>Paper-first guardrails</h3>
+            </div>
+          </div>
+          <ul class="risk-list">
+            <li>No autonomous real-money trades are enabled by this dashboard.</li>
+            <li>Every broker or money-moving action still needs explicit approval gates.</li>
+            <li>Use stop loss, position sizing, fees, slippage, and tax notes before real execution.</li>
+            <li>Strategy switches affect selection only; they are not buy/sell orders.</li>
+          </ul>
+        </article>
+
+        <article class="panel">
+          <div class="section-head">
+            <div>
+              <span class="label">Live Sync</span>
+              <h3>Server-sent updates</h3>
+            </div>
+            <span id="sseStatus" class="pill">connecting</span>
+          </div>
+          <div class="sync-table">
+            <div><span>Updated by</span><strong id="updatedBy">{{ payload.state.updated_by }}</strong></div>
+            <div><span>Previous strategy</span><strong id="previousStrategy">{{ payload.state.previous_strategy or 'none' }}</strong></div>
+            <div><span>State file</span><strong id="stateFile">{{ payload.risk.state_file }}</strong></div>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <footer>
+      Research and paper-trading decision support only. Not financial advice. No returns are guaranteed.
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+  </body>
+</html>
