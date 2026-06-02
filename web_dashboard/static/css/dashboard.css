@@ -17,11 +17,16 @@ footer {
 }
 
 .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   display: grid;
   grid-template-columns: 1fr 340px;
   gap: 18px;
   align-items: stretch;
-  padding: 28px 0 18px;
+  padding: 18px 0;
+  background: rgba(8, 17, 31, .96);
+  backdrop-filter: blur(10px);
 }
 
 h1,
@@ -205,5 +210,9 @@ footer {
   .strategy-grid,
   .overview-grid {
     grid-template-columns: 1fr;
+  }
+
+  .topbar {
+    position: static;
   }
 }
