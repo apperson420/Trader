@@ -27,18 +27,51 @@ function setCardClass(id, baseClass, statusClass) {
     }
 }
 
+function getGuidance(strategyAck, heartbeat) {
+    if (!heartbeat.healthy) {
+        return {
+            level: 'warning',
+            title: 'Start or check the bot runtime',
+            detail: 'The dashboard can save strategy requests, but the bot must be running and healthy before it can apply them. Run python run.py all and check logs if needed.'
+        };
+    }
+
+    if (!strategyAck.acknowledged) {
+        return {
+            level: 'pending',
+            title: 'Wait for bot acknowledgment',
+            detail: 'A paper strategy change is saved. Keep the bot running and wait for Strategy Sync to change to Applied by bot before relying on the new strategy.'
+        };
+    }
+
+    return {
+        level: 'ok',
+        title: 'System is synchronized',
+        detail: 'The bot has applied the requested paper strategy and heartbeat is healthy. You can continue monitoring or choose another paper strategy.'
+    };
+}
+
+function renderGuidance(strategyAck, heartbeat) {
+    const guidance = getGuidance(strategyAck, heartbeat);
+    setText('operatorGuidanceTitle', guidance.title);
+    setText('operatorGuidanceDetail', guidance.detail);
+    setCardClass('operatorGuidance', 'guidance-card', `guidance-${guidance.level}`);
+}
+
 function renderStatus(payload) {
     const state = payload.state || {};
     const runtime = payload.runtime || state.runtime || {};
     const risk = payload.risk || {};
     const strategy = payload.strategy || state.strategy || 'auto';
     const heartbeat = payload.heartbeat || {
+        healthy: false,
         label: 'No heartbeat yet',
         detail: 'Start the runtime with python run.py all.',
         status: 'not_started',
         age_seconds: null
     };
     const strategyAck = payload.strategy_ack || {
+        acknowledged: false,
         label: 'Unknown',
         detail: 'Strategy acknowledgement status is unavailable.',
         status: 'unknown',
@@ -61,6 +94,7 @@ function renderStatus(payload) {
     setText('heartbeatDetail', heartbeat.detail || 'Heartbeat status is unavailable.');
     setText('heartbeatAge', formatAge(heartbeat.age_seconds));
     setText('maxRisk', `${risk.max_risk_per_trade_percent || 1}%`);
+    setText('maxRiskInline', `${risk.max_risk_per_trade_percent || 1}%`);
     setText('strategyAckStatus', strategyAck.label || 'Unknown');
     setText('strategyAckLabel', strategyAck.label || 'Unknown');
     setText('strategyAckDetail', strategyAck.detail || 'Strategy acknowledgement status is unavailable.');
@@ -70,6 +104,7 @@ function renderStatus(payload) {
     setCardClass('strategyAckCard', 'status-chip', strategyAck.status || 'unknown');
     setCardClass('heartbeatCard', 'status-chip', `heartbeat-${heartbeat.status || 'unknown'}`);
     setCardClass('riskCard', 'status-chip', 'risk-paper');
+    renderGuidance(strategyAck, heartbeat);
 
     document.querySelectorAll('[data-strategy]').forEach(button => {
         button.classList.toggle('active', button.dataset.strategy === strategy);
