@@ -241,9 +241,20 @@ def get_current_strategy(default: str = "auto") -> str:
     return get_strategy_state(default=default).get("strategy", default)
 
 
-def set_current_strategy(strategy: str) -> bool:
-    """Backward-compatible helper used by older dashboard code."""
-    set_strategy_state(strategy)
+def set_current_strategy(
+    strategy: str,
+    *,
+    updated_by: str = "dashboard",
+    message: Optional[str] = None,
+) -> bool:
+    """
+    Backward-compatible helper used by dashboard code.
+
+    Returns True on success and raises StrategyStateError/OSError on failure.
+    Keeping the truthy bool return preserves older callers while still routing
+    every dashboard switch through the full audited shared-state path.
+    """
+    set_strategy_state(strategy, updated_by=updated_by, message=message)
     return True
 
 
@@ -260,7 +271,7 @@ def sync_strategy_to_bot(bot: Any, *, acknowledge: bool = True) -> Dict[str, Any
     - bot.current_strategy = strategy
     """
     state = get_strategy_state()
-    strategy = state["strategy"]
+    strategy = normalize_strategy(state["strategy"])
 
     if hasattr(bot, "switch_strategy") and callable(bot.switch_strategy):
         bot.switch_strategy(strategy)
