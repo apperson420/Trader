@@ -23,6 +23,11 @@
     ['free_tools_registry', []],
     ['setup_wizard', null],
     ['guided_workflow', null],
+    ['ai_review_coach_notes', []],
+    ['ai_live_assist_drafts', []],
+    ['decision_approval_log', []],
+    ['support_reports', []],
+    ['vault_reports', []],
     ['live_broker_logs', []],
     ['live_trading_acknowledged', null],
     ['trading_mode_control', null],
@@ -107,7 +112,7 @@
       app: 'Trader Command Center',
       reason,
       exportedAt: new Date().toISOString(),
-      safety: 'paper only, research only, not investment advice, no real-money order was sent',
+      safety: 'paper/research by default, not investment advice, optional manual live ticket logs may exist, no API keys or secrets included',
       keys: KEYS.map(([name]) => name),
       data: collectData()
     };
@@ -270,7 +275,13 @@
       ['Broker logs', 'broker_logs'],
       ['Reports', 'validation_report'],
       ['Workflow', 'guided_workflow'],
-      ['Release readiness', 'release_readiness']
+      ['AI reviews', 'ai_review_coach_notes'],
+      ['AI live drafts', 'ai_live_assist_drafts'],
+      ['Decision approvals', 'decision_approval_log'],
+      ['Support reports', 'support_reports'],
+      ['Vault reports', 'vault_reports'],
+      ['Release readiness', 'release_readiness'],
+      ['Live logs', 'live_broker_logs']
     ].map(([label, name]) => `<span>${label}: ${dataCount(name)}</span>`).join('');
   }
 
