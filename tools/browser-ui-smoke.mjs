@@ -203,7 +203,8 @@ async function tryPlaywrightSmoke() {
     });
     await page.waitForSelector('#guidedWorkflow');
     await page.waitForSelector('#setupWizardOpen');
-    await page.click('#setupWizardOpen');
+    const alreadyOpen = await page.evaluate(() => document.getElementById('setupWizard')?.classList.contains('setup-open'));
+    if (!alreadyOpen) await page.click('#setupWizardOpen');
     await page.waitForFunction(() => document.getElementById('setupWizard')?.classList.contains('setup-open'));
     const wizardVisible = await page.evaluate(() => document.getElementById('setupWizard')?.classList.contains('setup-open'));
     if (!wizardVisible) fail('first-run setup wizard did not open inline for a new browser session');
