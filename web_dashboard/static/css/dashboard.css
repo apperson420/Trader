@@ -108,7 +108,8 @@ code {
 .overview-grid article,
 .sync-table div,
 .result-box,
-.status-chip {
+.status-chip,
+.guidance-card {
   border: 1px solid rgba(255, 255, 255, .14);
   background: rgba(255, 255, 255, .045);
   border-radius: 16px;
@@ -146,7 +147,8 @@ code {
 .overview-grid strong,
 .sync-table strong,
 .status-card strong,
-.status-chip strong {
+.status-chip strong,
+.guidance-card strong {
   display: block;
   margin-top: 6px;
   font-size: 21px;
@@ -163,9 +165,33 @@ code {
 .muted,
 .risk-list,
 .status-chip span,
+.guidance-card p,
 footer {
   color: #9fb0c6;
   line-height: 1.55;
+}
+
+.guidance-card {
+  margin-top: 12px;
+}
+
+.guidance-card p {
+  margin-bottom: 0;
+}
+
+.guidance-ok {
+  border-color: rgba(167, 243, 208, .75);
+  background: rgba(34, 197, 94, .10);
+}
+
+.guidance-pending {
+  border-color: rgba(76, 201, 240, .85);
+  background: rgba(76, 201, 240, .10);
+}
+
+.guidance-warning {
+  border-color: rgba(251, 191, 36, .85);
+  background: rgba(251, 191, 36, .10);
 }
 
 .status-chip.applied_by_bot,
