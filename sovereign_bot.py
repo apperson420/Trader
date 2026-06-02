@@ -1,4 +1,4 @@
-# BTC Sovereign v1.4 - Runtime Strategy Sync Bot
+# BTC Sovereign v1.5 - Runtime Strategy Sync Bot
 """
 Real runtime bridge for dashboard strategy switching.
 
@@ -10,6 +10,7 @@ dashboard-selected strategy in shared_state.py.
 from __future__ import annotations
 
 import json
+import logging
 import signal
 import time
 from dataclasses import dataclass, field
@@ -17,6 +18,27 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import shared_state
+
+LOG_DIR = Path("logs")
+LOG_FILE = LOG_DIR / "sovereign_bot.log"
+
+
+def _build_logger() -> logging.Logger:
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    logger = logging.getLogger("btc_sovereign.runtime")
+    logger.setLevel(logging.INFO)
+    if not logger.handlers:
+        formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+        file_handler = logging.FileHandler(LOG_FILE, encoding="utf-8")
+        file_handler.setFormatter(formatter)
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+        logger.addHandler(console_handler)
+    return logger
+
+
+logger = _build_logger()
 
 
 @dataclass
@@ -26,10 +48,10 @@ class StrategyManager:
     active_strategy: str = "auto"
     history: list[Dict[str, Any]] = field(default_factory=list)
 
-    def set_active_strategy(self, strategy: str) -> None:
+    def set_active_strategy(self, strategy: str) -> bool:
         normalized = shared_state.normalize_strategy(strategy)
         if normalized == self.active_strategy:
-            return
+            return False
         self.history.append(
             {
                 "time": time.time(),
@@ -38,9 +60,10 @@ class StrategyManager:
             }
         )
         self.active_strategy = normalized
+        return True
 
-    def switch_strategy(self, strategy: str) -> None:
-        self.set_active_strategy(strategy)
+    def switch_strategy(self, strategy: str) -> bool:
+        return self.set_active_strategy(strategy)
 
 
 class SovereignBot:
@@ -55,35 +78,51 @@ class SovereignBot:
         self.config = config or {}
         runtime_config = self.config.get("runtime", {})
         self.poll_seconds = float(runtime_config.get("strategy_poll_seconds", 1.0))
-        initial_strategy = shared_state.get_current_strategy(
-            self.config.get("default_strategy", "auto")
+        initial_strategy = shared_state.normalize_strategy(
+            shared_state.get_current_strategy(self.config.get("default_strategy", "auto"))
         )
         self.strategy_manager = StrategyManager(active_strategy=initial_strategy)
         self.current_strategy = initial_strategy
         self.running = False
-        self.last_seen_version = 0
+        self.last_seen_version = int(shared_state.get_strategy_state(initial_strategy).get("version") or 0)
+        logger.info("SovereignBot initialized in paper-safe mode with strategy=%s", self.current_strategy)
 
-    def switch_strategy(self, strategy: str) -> None:
-        self.strategy_manager.set_active_strategy(strategy)
+    def switch_strategy(self, strategy: str) -> bool:
+        changed = self.strategy_manager.set_active_strategy(strategy)
         self.current_strategy = self.strategy_manager.active_strategy
+        return changed
 
-    def set_strategy(self, strategy: str) -> None:
-        self.switch_strategy(strategy)
+    def set_strategy(self, strategy: str) -> bool:
+        return self.switch_strategy(strategy)
 
     def sync_once(self) -> Dict[str, Any]:
         """Apply the latest dashboard strategy once and return shared state."""
         state = shared_state.get_strategy_state(default=self.current_strategy)
-        requested_strategy = state["strategy"]
+        requested_strategy = shared_state.normalize_strategy(state["strategy"])
         requested_version = int(state.get("version") or 0)
+        runtime = state.get("runtime", {})
+        already_applied = (
+            requested_strategy == self.current_strategy
+            and int(runtime.get("last_applied_version") or 0) == requested_version
+        )
 
-        if requested_strategy != self.current_strategy or requested_version != self.last_seen_version:
-            self.switch_strategy(requested_strategy)
+        if not already_applied:
+            previous_strategy = self.current_strategy
+            changed = self.switch_strategy(requested_strategy)
             self.last_seen_version = requested_version
+            logger.info(
+                "Applied dashboard strategy switch: %s -> %s (state version %s, changed=%s)",
+                previous_strategy,
+                self.current_strategy,
+                requested_version,
+                changed,
+            )
             state = shared_state.acknowledge_strategy(
                 self.current_strategy,
                 updated_by="SovereignBot",
             )
         else:
+            self.last_seen_version = requested_version
             state = shared_state.record_runtime_heartbeat(
                 bot_strategy=self.current_strategy,
                 bot_status="running",
@@ -99,11 +138,13 @@ class SovereignBot:
             "last_seen_version": self.last_seen_version,
             "strategy_history": self.strategy_manager.history[-25:],
             "mode": self.config.get("mode", "paper"),
+            "log_file": str(LOG_FILE),
         }
 
     def run_forever(self) -> None:
         """Run until Ctrl+C or process stop."""
         self.running = True
+        logger.info("SovereignBot runtime starting in paper-safe strategy-sync mode.")
         shared_state.record_runtime_heartbeat(
             bot_strategy=self.current_strategy,
             bot_status="starting",
@@ -126,6 +167,7 @@ class SovereignBot:
                 time.sleep(max(0.25, self.poll_seconds))
         finally:
             self.running = False
+            logger.info("SovereignBot runtime stopped.")
             shared_state.mark_runtime_stopped("SovereignBot runtime stopped.")
             signal.signal(signal.SIGINT, previous_sigint)
             signal.signal(signal.SIGTERM, previous_sigterm)
