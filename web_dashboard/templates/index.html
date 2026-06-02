@@ -50,9 +50,15 @@
               <div>
                 <small>Risk State</small>
                 <strong id="riskStatus">Paper Safe</strong>
-                <span>Real-money trading is disabled by default.</span>
+                <span>Real-money trading is disabled. Max paper risk: <b id="maxRiskInline">{{ payload.risk.max_risk_per_trade_percent }}%</b>.</span>
               </div>
             </article>
+          </div>
+
+          <div id="operatorGuidance" class="guidance-card" aria-live="polite">
+            <span class="label">Next Best Check</span>
+            <strong id="operatorGuidanceTitle">Review dashboard status</strong>
+            <p id="operatorGuidanceDetail">Use the Strategy Sync, Bot Heartbeat, and Risk State cards before changing paper strategies.</p>
           </div>
         </div>
 
@@ -103,7 +109,7 @@
             <li>No autonomous real-money trades are enabled by this dashboard.</li>
             <li>Every broker or money-moving action still needs explicit approval gates.</li>
             <li>Strategy switches affect selection only; they are not buy/sell orders.</li>
-            <li>Configured max risk per trade: <strong id="maxRisk">{{ payload.risk.max_risk_per_trade_percent }}%</strong>.</li>
+            <li>Configured max risk per paper trade: <strong id="maxRisk">{{ payload.risk.max_risk_per_trade_percent }}%</strong>.</li>
           </ul>
         </article>
 
