@@ -20,16 +20,11 @@ function formatAge(seconds) {
     return `${seconds}s`;
 }
 
-function updateAckBanner(strategyAck) {
-    const banner = document.getElementById('strategyAckBanner');
-    if (!banner) return;
-    banner.className = `ack-banner ${strategyAck.status || 'unknown'}`;
-}
-
-function updateHeartbeatBanner(heartbeat) {
-    const banner = document.getElementById('heartbeatBanner');
-    if (!banner) return;
-    banner.className = `ack-banner heartbeat-${heartbeat.status || 'unknown'}`;
+function setCardClass(id, baseClass, statusClass) {
+    const node = document.getElementById(id);
+    if (node) {
+        node.className = `${baseClass} ${statusClass || 'unknown'}`;
+    }
 }
 
 function renderStatus(payload) {
@@ -58,7 +53,6 @@ function renderStatus(payload) {
     setText('lastUpdated', state.updated_at || 'not switched yet');
     setText('updatedBy', state.updated_by || 'system');
     setText('previousStrategy', titleCaseStrategy(state.previous_strategy || 'none'));
-    setText('paperMode', risk.mode || state.mode || 'paper');
     setText('botRunning', yesNo(runtime.bot_running));
     setText('botStrategy', titleCaseStrategy(runtime.bot_strategy || 'auto'));
     setText('botHeartbeat', runtime.last_heartbeat_at || 'not started');
@@ -72,8 +66,10 @@ function renderStatus(payload) {
     setText('strategyAckDetail', strategyAck.detail || 'Strategy acknowledgement status is unavailable.');
     setText('requestedStrategy', titleCaseStrategy(strategyAck.requested_strategy || strategy));
     setText('appliedStrategy', titleCaseStrategy(strategyAck.applied_strategy || 'none'));
-    updateAckBanner(strategyAck);
-    updateHeartbeatBanner(heartbeat);
+
+    setCardClass('strategyAckCard', 'status-chip', strategyAck.status || 'unknown');
+    setCardClass('heartbeatCard', 'status-chip', `heartbeat-${heartbeat.status || 'unknown'}`);
+    setCardClass('riskCard', 'status-chip', 'risk-paper');
 
     document.querySelectorAll('[data-strategy]').forEach(button => {
         button.classList.toggle('active', button.dataset.strategy === strategy);
