@@ -1,4 +1,4 @@
-# BTC Sovereign v1.7 - Web Dashboard Control Center
+# BTC Sovereign v1.8 - Web Dashboard Control Center
 """
 Flask control center for BTC Sovereign / Trader.
 
@@ -18,6 +18,7 @@ from typing import Any, Dict, Optional
 from flask import Flask, Response, jsonify, render_template, request
 
 import shared_state
+from ai_assistant import AssistantService
 from sovereign_bot import load_config
 
 APP_ROOT = Path(__file__).resolve().parent
@@ -26,6 +27,7 @@ app = Flask(
     template_folder=str(APP_ROOT / "templates"),
     static_folder=str(APP_ROOT / "static"),
 )
+assistant_service = AssistantService()
 
 
 def _parse_iso(value: Optional[str]) -> Optional[datetime]:
@@ -168,6 +170,23 @@ def index():
 @app.get("/api/status")
 def api_status():
     return jsonify(_dashboard_payload())
+
+
+@app.get("/api/ai/status")
+def ai_status():
+    return jsonify(assistant_service.status())
+
+
+@app.get("/api/ai/context")
+def ai_context():
+    return jsonify(assistant_service.context())
+
+
+@app.post("/api/ai/chat")
+def ai_chat():
+    data = request.get_json(silent=True) or {}
+    message = data.get("message", "")
+    return jsonify(assistant_service.chat(message))
 
 
 @app.route("/api/switch-strategy", methods=["POST"])
