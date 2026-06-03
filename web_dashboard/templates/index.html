@@ -108,6 +108,30 @@
         </div>
       </section>
 
+      <section class="panel assistant-panel" aria-label="BTC Sovereign assistant">
+        <div class="section-head">
+          <div>
+            <span class="label">Ask BTC Sovereign</span>
+            <h3>Paper-safe dashboard assistant</h3>
+            <p class="section-help">Education and paper-trading system help only. Not financial advice.</p>
+          </div>
+          <span id="assistantStatus" class="pill">local rule-based</span>
+        </div>
+        <div id="assistantResponse" class="assistant-response" aria-live="polite">
+          Ask about bot status, strategy sync, heartbeat, Paper Safe mode, or what to check next.
+        </div>
+        <form id="assistantForm" class="assistant-form">
+          <input
+            id="assistantInput"
+            type="text"
+            autocomplete="off"
+            placeholder="Example: Did the strategy apply?"
+            aria-label="Ask BTC Sovereign a dashboard status question"
+          >
+          <button id="assistantSend" type="submit">Send</button>
+        </form>
+      </section>
+
       <section class="grid two">
         <article class="panel compact-panel">
           <div class="section-head">
