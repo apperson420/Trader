@@ -1,5 +1,5 @@
 {
-  "version": "1.4",
+  "version": "1.8",
   "project": "BTC Sovereign",
   "mode": "paper",
   "default_strategy": "auto",
@@ -24,6 +24,14 @@
     "paper_first": true,
     "max_risk_per_trade_percent": 1.0,
     "show_fees_slippage_and_tax_notes": true
+  },
+  "assistant": {
+    "use_ollama": false,
+    "ollama": {
+      "model": "llama3",
+      "url": "http://127.0.0.1:11434/api/generate",
+      "timeout_seconds": 8.0
+    }
   },
   "audit": {
     "strategy_events_file": "logs/strategy_events.jsonl",
