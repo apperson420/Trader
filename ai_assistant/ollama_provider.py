@@ -13,11 +13,11 @@ import urllib.error
 import urllib.request
 from typing import Any, Dict
 
-from .assistant_service import DISCLAIMER
 from .provider_base import ProviderResult
 
 DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434/api/generate"
 DEFAULT_MODEL = "llama3"
+DISCLAIMER = "Education and paper-trading system help only. Not financial advice."
 
 
 class OllamaProvider:
