@@ -35,6 +35,7 @@ const manifest = {
     'Alpaca paper setup wizard with server-side environment checks',
     'Optional manual live trading readiness and manual limit-ticket flow, disabled unless server-side env vars are configured',
     'Manual live trading remains human-approved only',
+    'Human-approved live ticket boundary',
     'No unattended autonomous live trading',
     'Server-side live trading kill switch via TRADER_LIVE_KILL_SWITCH=LOCK_LIVE_TRADING',
     'Optional live symbol allowlist via TRADER_LIVE_ALLOWED_SYMBOLS',

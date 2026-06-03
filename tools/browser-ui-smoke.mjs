@@ -27,6 +27,7 @@ const requiredHtml = [
 const requiredFiles = [
   'paper-broker.js',
   'live-trading-control.js',
+  'ai-live-assist.js',
   'mode-control-center.js',
   'onboarding-wizard.js',
   'guided-workflow.js',
@@ -243,14 +244,16 @@ async function tryPlaywrightSmoke() {
     await page.waitForSelector('#paperBroker');
     await page.waitForSelector('#liveTradingControl');
     await page.waitForSelector('#manualLiveOrderTicket');
+    await page.waitForSelector('#aiLiveAssist');
     const liveTicketState = await page.evaluate(() => ({
       exists: Boolean(document.getElementById('manualLiveOrderTicket')),
       locked: Boolean(document.getElementById('liveTicketSubmit')?.disabled),
       warning: document.getElementById('liveTradingControl')?.textContent.includes('Real money can be lost'),
       phrase: document.getElementById('liveTicketConfirm')?.getAttribute('placeholder') === 'LIVE ORDER - I ACCEPT REAL MONEY RISK',
-      noAi: document.getElementById('liveTradingControl')?.textContent.includes('AI/autopilot cannot submit live trades')
+      noAi: document.getElementById('liveTradingControl')?.textContent.includes('AI/autopilot cannot submit live trades'),
+      aiLiveAssist: document.getElementById('aiLiveAssist')?.textContent.includes('AI cannot submit live trades')
     }));
-    if (!liveTicketState.exists || !liveTicketState.locked || !liveTicketState.warning || !liveTicketState.phrase || !liveTicketState.noAi) fail(`manual live ticket safety state failed: ${JSON.stringify(liveTicketState)}`);
+    if (!liveTicketState.exists || !liveTicketState.locked || !liveTicketState.warning || !liveTicketState.phrase || !liveTicketState.noAi || !liveTicketState.aiLiveAssist) fail(`manual live ticket safety state failed: ${JSON.stringify(liveTicketState)}`);
     await page.click('#brokerSetupCheck');
     await page.waitForFunction(() => {
       const output = document.getElementById('brokerSetupOutput')?.textContent || '';
@@ -267,7 +270,8 @@ async function tryPlaywrightSmoke() {
       manualLiveTicket: {
         exists: Boolean(document.getElementById('manualLiveOrderTicket')),
         locked: Boolean(document.getElementById('liveTicketSubmit')?.disabled)
-      }
+      },
+      aiLiveAssist: Boolean(document.getElementById('aiLiveAssist'))
     }));
     if (errors.length) fail(`browser console errors: ${errors.join(' | ')}`);
     if (result.watchCount !== before.watchCount + 1) fail(`watchlist did not update in browser smoke: ${JSON.stringify({ before, result })}`);
@@ -308,13 +312,14 @@ const broker = readFileSync(resolve(root, 'paper-broker.js'), 'utf8');
 const brokerApi = readFileSync(resolve(root, 'api/alpaca-paper.js'), 'utf8');
 const persistence = readFileSync(resolve(root, 'persistence-engine.js'), 'utf8');
 const liveControl = readFileSync(resolve(root, 'live-trading-control.js'), 'utf8');
+const aiLiveAssist = readFileSync(resolve(root, 'ai-live-assist.js'), 'utf8');
 const modeControl = readFileSync(resolve(root, 'mode-control-center.js'), 'utf8');
 const liveApi = readFileSync(resolve(root, 'api/alpaca-live.js'), 'utf8');
 const onboarding = readFileSync(resolve(root, 'onboarding-wizard.js'), 'utf8');
 const guided = readFileSync(resolve(root, 'guided-workflow.js'), 'utf8');
 const autonomy = readFileSync(resolve(root, 'autonomous-engine.js'), 'utf8');
 const hub = readFileSync(resolve(root, 'free-tools-hub.js'), 'utf8');
-const browserSources = [liveControl, modeControl, guided, autonomy, hub, readFileSync(resolve(root, 'app.js'), 'utf8')].join('\n');
+const browserSources = [liveControl, aiLiveAssist, modeControl, guided, autonomy, hub, readFileSync(resolve(root, 'app.js'), 'utf8')].join('\n');
 const behaviorChecks = [
   ['Alpaca setup wizard visible', broker.includes('Paper setup wizard')],
   ['Alpaca setup-status API call wired', broker.includes("api('setup-status')")],
@@ -323,6 +328,8 @@ const behaviorChecks = [
   ['Backup import present', persistence.includes('Import backup JSON')],
   ['Supabase fallback message present', persistence.includes('LocalStorage fallback is active')],
   ['Live control module exists', liveControl.includes('Manual Live Order Ticket') && liveControl.includes('manualLiveOrderTicket')],
+  ['AI Live Assist draft-only module exists', aiLiveAssist.includes('AI Live Assist') && aiLiveAssist.toLowerCase().includes('draft only')],
+  ['AI Live Assist cannot submit or approve live trades', !aiLiveAssist.includes('alpaca-live') && !aiLiveAssist.includes('liveTicketSubmit') && !aiLiveAssist.includes('liveTicketHumanReviewed') && !aiLiveAssist.includes('LIVE ORDER - I ACCEPT REAL MONEY RISK')],
   ['Mode control module exists', modeControl.includes('Mode Control') && modeControl.includes('live-readiness')],
   ['Manual live ticket locked by default', liveControl.includes('disabled>Submit manual live limit-day ticket') && liveControl.includes('Live ticket locked')],
   ['Real-money warning exists', liveControl.includes('Real money can be lost')],

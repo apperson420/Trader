@@ -45,6 +45,7 @@ const required = [
   'persistence-engine.js',
   'owner-access-center.js',
   'ai-review-coach.js',
+  'ai-live-assist.js',
   'decision-approval-center.js',
   'intelligence-memory-center.js',
   'no-loss-data-vault.js',
@@ -54,6 +55,7 @@ const required = [
   'tools/browser-ui-smoke.mjs',
   'tools/release-manifest.mjs',
   'docs/AUTONOMY_POLICY.md',
+  'docs/AI_LIVE_ASSIST.md',
   'docs/LIVE_TRADING_SAFETY.md'
 ];
 
@@ -74,6 +76,7 @@ const expectedLoadedModules = [
   'mode-control-center.js',
   'owner-access-center.js',
   'ai-review-coach.js',
+  'ai-live-assist.js',
   'decision-approval-center.js',
   'intelligence-memory-center.js',
   'no-loss-data-vault.js',
@@ -82,8 +85,7 @@ const expectedLoadedModules = [
   'release-readiness-center.js'
 ];
 for (const module of expectedLoadedModules) contains(app, `'${module}'`, `app loader includes ${module}`);
-if (aiLiveAssistExists) contains(app, "'ai-live-assist.js'", 'app loader includes ai-live-assist.js when the module exists');
-else notContains(app, "'ai-live-assist.js'", 'app loader does not load missing ai-live-assist.js');
+contains(app, "'ai-live-assist.js'", 'app loader includes ai-live-assist.js');
 
 contains(liveApi, "TRADER_ENABLE_LIVE_TRADING === 'I_UNDERSTAND_LIVE_TRADING_RISK'", 'backend requires exact live unlock env var');
 contains(liveApi, "TRADER_LIVE_KILL_SWITCH === 'LOCK_LIVE_TRADING'", 'backend has emergency live kill switch');
@@ -133,25 +135,33 @@ contains(manifest, 'no autonomous live trading', 'manifest states no autonomous 
 contains(manifest, 'Server-side live trading kill switch', 'manifest documents kill switch');
 contains(manifest, 'Optional live symbol allowlist', 'manifest documents symbol allowlist');
 contains(manifest, 'AI Review Coach', 'manifest documents AI Review Coach');
+contains(manifest, 'AI Live Assist draft-only mode', 'manifest documents AI Live Assist draft-only mode');
 contains(manifest, 'Decision Approval Center', 'manifest documents Decision Approval Center');
 contains(manifest, 'Owner Access Center', 'manifest documents Owner Access Center');
+contains(manifest, 'Human-approved live ticket boundary', 'manifest documents human-approved live ticket boundary');
 
 contains(docs, 'TRADER_LIVE_KILL_SWITCH=LOCK_LIVE_TRADING', 'docs include kill switch setup');
 contains(docs, 'TRADER_LIVE_ALLOWED_SYMBOLS', 'docs include symbol allowlist setup');
 contains(docs, 'does not allow autonomous live trading', 'docs preserve no-autonomous-live-trading rule');
 
 if (aiLiveAssistExists) {
-  contains(aiLiveAssist.toLowerCase(), 'draft', 'ai-live-assist is draft-only by wording');
+  contains(aiLiveAssist.toLowerCase(), 'draft only', 'ai-live-assist is draft-only by wording');
+  contains(aiLiveAssist, 'AI Live Assist', 'ai-live-assist panel is named AI Live Assist');
   notContains(aiLiveAssist, '/api/alpaca-live?action=submit-order', 'AI live assist does not call live submit endpoint');
   notContains(aiLiveAssist, "action=submit-order", 'AI live assist does not build submit-order action strings');
   notContains(aiLiveAssist, 'humanReviewed: true', 'AI live assist does not set humanReviewed true');
   notContains(aiLiveAssist, '"humanReviewed":true', 'AI live assist does not serialize humanReviewed true');
+  notContains(aiLiveAssist, 'liveTicketHumanReviewed', 'AI live assist does not touch the human-review checkbox');
+  notContains(aiLiveAssist, 'liveTicketRiskAck', 'AI live assist does not touch the risk acknowledgement checkbox');
+  notContains(aiLiveAssist, 'liveTicketSubmit', 'AI live assist does not touch the live submit button');
   notContains(aiLiveAssist, 'LIVE ORDER - I ACCEPT REAL MONEY RISK', 'AI live assist does not type exact live confirmation phrase');
+  notContains(aiLiveAssist, 'alpaca-live', 'AI live assist does not call live broker endpoints');
+  notContains(aiLiveAssist.toLowerCase(), 'autonomous live trading', 'AI live assist avoids autonomous live trading language');
   notContains(aiLiveAssist.toLowerCase(), 'buy now', 'AI live assist does not contain buy-now advice');
   notContains(aiLiveAssist.toLowerCase(), 'sell now', 'AI live assist does not contain sell-now advice');
   notContains(aiLiveAssist.toLowerCase(), 'guaranteed', 'AI live assist does not contain profit guarantee language');
 } else {
-  record(true, 'ai-live-assist.js is not present; draft-only checks skipped safely');
+  record(false, 'ai-live-assist.js must exist for AI Live Assist Draft Mode v1');
 }
 
 const browserSecretTokens = ['ALPACA_LIVE_SECRET_KEY', 'APCA-API-SECRET-KEY'];

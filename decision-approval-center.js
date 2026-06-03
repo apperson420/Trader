@@ -43,6 +43,30 @@
     render();
   }
 
+  function addFromAiLiveDraft() {
+    const liveDraft = read('ai_live_assist_drafts', []).slice(-1)[0];
+    if (!liveDraft) return;
+    const draft = {
+      id: `decision-ai-live-${Date.now()}`,
+      time: new Date().toLocaleString(),
+      symbol: liveDraft.symbol,
+      direction: liveDraft.side === 'sell' ? 'Short' : 'Long',
+      entry: liveDraft.limitPrice,
+      stop: null,
+      target: null,
+      riskPct: null,
+      riskDollars: null,
+      rr: liveDraft.rewardRisk,
+      checklist: liveDraft.checklistCount,
+      blockers: [...(liveDraft.warnings || []), ...(liveDraft.missingEvidence || [])],
+      status: 'pending_review',
+      source: 'ai_live_assist_draft',
+      note: 'Created from AI Live Assist draft as pending review only. This does not approve or submit anything.'
+    };
+    write(KEY, [...read(KEY, []), draft].slice(-80));
+    render();
+  }
+
   function updateDecision(id, status) {
     const rows = read(KEY, []);
     const next = rows.map((row) => row.id === id ? { ...row, status, reviewedAt: new Date().toLocaleString() } : row);
@@ -92,7 +116,7 @@
     section.innerHTML = `
       <div class="section-head"><div><span class="label">Decision Approval</span><h3>Human review queue</h3></div><strong id="decisionApprovalScore">0 pending</strong></div>
       <p class="muted">Use this as the bridge between software guidance and human judgment. It records review decisions only; it does not execute account actions or bypass any safety gate.</p>
-      <div class="decision-actions"><button id="decisionCreate" type="button">Create review item from current plan</button><button id="decisionExport" class="decision-secondary" type="button">Export decision log</button></div>
+      <div class="decision-actions"><button id="decisionCreate" type="button">Create review item from current plan</button><button id="decisionCreateFromAiLive" class="decision-secondary" type="button">Create pending review from AI live draft</button><button id="decisionExport" class="decision-secondary" type="button">Export decision log</button></div>
       <div id="decisionApprovalList" class="list"></div>`;
     if (coach?.parentNode) coach.parentNode.insertBefore(section, coach.nextSibling);
     else if (mode?.parentNode) mode.parentNode.insertBefore(section, mode.nextSibling);
@@ -101,6 +125,7 @@
     style.textContent = `.decision-actions{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}.decision-actions button{width:auto}.decision-secondary{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#edf6ff}.decision-card{border:1px solid rgba(255,255,255,.14);border-left:4px solid #fbbf24;border-radius:14px;padding:12px;background:rgba(255,255,255,.05);color:#d7e2f0;margin:10px 0}.decision-card strong{color:#edf6ff}.decision-card p{margin:6px 0}.decision-ok{border-left-color:#a7f3d0}.decision-bad{border-left-color:#f87171}@media(max-width:860px){.decision-actions button{width:100%}}`;
     document.head.appendChild(style);
     document.getElementById('decisionCreate').addEventListener('click', addDecision);
+    document.getElementById('decisionCreateFromAiLive').addEventListener('click', addFromAiLiveDraft);
     document.getElementById('decisionExport').addEventListener('click', exportLog);
     document.addEventListener('trader:persistence-restored', render);
     render();

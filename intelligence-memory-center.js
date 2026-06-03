@@ -11,6 +11,7 @@
   };
   const sources = [
     ['AI coach reviews', 'ai_review_coach_notes'],
+    ['AI live assist drafts', 'ai_live_assist_drafts'],
     ['Human decisions', 'decision_approval_log'],
     ['Journal notes', 'journal'],
     ['Checklist state', 'checks'],
@@ -68,7 +69,7 @@
   }
   function summarizeToJournal() {
     const snap = snapshot();
-    const text = `Intelligence memory summary: ${snap.pendingDecisionReviews} pending decision reviews, ${snap.reviewedDecisions} reviewed decisions, ${snap.rejectedDecisions} rejected decisions, ${snap.counts['AI coach reviews']} AI coach reviews, ${snap.counts['Journal notes']} journal notes. This is a coaching/accountability summary only, not investment advice.`;
+    const text = `Intelligence memory summary: ${snap.pendingDecisionReviews} pending decision reviews, ${snap.reviewedDecisions} reviewed decisions, ${snap.rejectedDecisions} rejected decisions, ${snap.counts['AI coach reviews']} AI coach reviews, ${snap.counts['AI live assist drafts']} AI live assist drafts, ${snap.counts['Journal notes']} journal notes. This is a coaching/accountability summary only, not investment advice.`;
     write('journal', [...read('journal', []), { title: 'Intelligence memory summary', text, date: new Date().toLocaleString() }]);
     render();
   }
