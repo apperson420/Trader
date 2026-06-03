@@ -168,6 +168,49 @@ async function switchStrategy(strategy) {
     }
 }
 
+async function askAssistant(message) {
+    const responseNode = document.getElementById('assistantResponse');
+    const sendButton = document.getElementById('assistantSend');
+    if (!responseNode || !sendButton) return;
+
+    responseNode.textContent = 'Thinking through the safe dashboard context...';
+    responseNode.className = 'assistant-response pending';
+    sendButton.disabled = true;
+
+    try {
+        const response = await fetch('/api/ai/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message })
+        });
+        const result = await response.json();
+        responseNode.textContent = result.response || 'No assistant response returned.';
+        responseNode.className = result.blocked ? 'assistant-response blocked' : 'assistant-response success';
+    } catch (error) {
+        responseNode.textContent = `Assistant error: ${error.message}`;
+        responseNode.className = 'assistant-response error';
+    } finally {
+        sendButton.disabled = false;
+    }
+}
+
+function connectAssistantChat() {
+    const form = document.getElementById('assistantForm');
+    const input = document.getElementById('assistantInput');
+    if (!form || !input) return;
+
+    form.addEventListener('submit', event => {
+        event.preventDefault();
+        const message = input.value.trim();
+        if (!message) {
+            setText('assistantResponse', 'Type a question about dashboard status, strategy sync, heartbeat, or Paper Safe mode.');
+            return;
+        }
+        askAssistant(message);
+        input.value = '';
+    });
+}
+
 function connectEvents() {
     const statusNode = document.getElementById('sseStatus');
 
@@ -195,4 +238,5 @@ function connectEvents() {
     });
 }
 
+connectAssistantChat();
 connectEvents();
