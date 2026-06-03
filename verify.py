@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import logging
 import os
 import tempfile
 from pathlib import Path
@@ -54,6 +55,11 @@ EXPECTED_DASHBOARD_IDS = (
     "stateVersion",
     "auditFile",
     "sseStatus",
+    "assistantForm",
+    "assistantInput",
+    "assistantResponse",
+    "assistantSend",
+    "assistantStatus",
 )
 
 
@@ -95,12 +101,70 @@ def verify_dashboard_ui_contract() -> None:
     assert "aria-pressed" in dashboard_js, "JS must keep aria-pressed synchronized."
     assert "strategy-button-state" in dashboard_js, "JS must keep Active/Switch labels synchronized."
     assert "operatorGuidance" in dashboard_js, "JS must update operator guidance."
+    assert "assistantForm" in dashboard_js, "JS must wire assistant form."
+    assert "assistantInput" in dashboard_js, "JS must read assistant input."
+    assert "assistantResponse" in dashboard_js, "JS must update assistant response."
+    assert "assistantSend" in dashboard_js, "JS must update assistant send state."
+    assert "/api/ai/chat" in dashboard_js, "JS must post assistant chat to /api/ai/chat."
+    for state_class in ("pending", "error", "blocked", "success"):
+        assert state_class in dashboard_js, f"Assistant JS must handle {state_class} state."
 
     print("  Dashboard IDs, strategy cards, ARIA state, and live JS hooks are present")
 
 
+def verify_ai_assistant_flow(dashboard_app) -> None:
+    print("\n[2] AI assistant safety flow")
+    client = dashboard_app.app.test_client()
+
+    status_response = client.get("/api/ai/status")
+    assert status_response.status_code == 200
+    status_payload = status_response.get_json()
+    assert status_payload["ok"] is True
+    assert status_payload["paper_safe"] is True
+    assert status_payload["can_execute_trades"] is False
+    print("  /api/ai/status reports local paper-safe assistant")
+
+    context_response = client.get("/api/ai/context")
+    assert context_response.status_code == 200
+    context_payload = context_response.get_json()
+    assert context_payload["ok"] is True
+    context = context_payload["context"]
+    expected_safe_keys = {
+        "requested_strategy",
+        "applied_strategy",
+        "strategy_acknowledgement",
+        "heartbeat_status",
+        "bot_running",
+        "paper_mode",
+        "real_money_trading",
+        "max_paper_risk_percent",
+        "state_version",
+        "recent_status_message",
+    }
+    assert expected_safe_keys.issubset(context), "Assistant context missing safe status keys"
+    lowered_context = json.dumps(context, sort_keys=True).lower()
+    for unsafe in ("secret", "token", "password", "api_key", "private_key", "credential"):
+        assert unsafe not in lowered_context, f"Assistant context leaked unsafe term: {unsafe}"
+    print("  /api/ai/context returns safe status context without secrets")
+
+    chat_response = client.post("/api/ai/chat", json={"message": "Is the bot running?"})
+    assert chat_response.status_code == 200
+    chat_payload = chat_response.get_json()
+    assert chat_payload["ok"] is True
+    assert chat_payload["blocked"] is False
+    assert chat_payload["response"]
+    print("  /api/ai/chat answers a basic status question")
+
+    unsafe_response = client.post("/api/ai/chat", json={"message": "buy BTC with real money now"})
+    assert unsafe_response.status_code == 200
+    unsafe_payload = unsafe_response.get_json()
+    assert unsafe_payload["blocked"] is True
+    assert "cannot" in unsafe_payload["response"].lower()
+    print("  /api/ai/chat blocks unsafe real-money trade requests")
+
+
 def verify_dashboard_to_bot_flow(shared_state, sovereign_bot, dashboard_app) -> None:
-    print("\n[2] Dashboard -> shared_state -> SovereignBot flow")
+    print("\n[3] Dashboard -> shared_state -> SovereignBot flow")
     bot = sovereign_bot.SovereignBot({"mode": "paper", "default_strategy": "auto"})
     assert bot.current_strategy == "auto", "Bot should start on auto"
 
@@ -129,7 +193,7 @@ def verify_dashboard_to_bot_flow(shared_state, sovereign_bot, dashboard_app) -> 
 
 
 def verify_invalid_strategy_rejected(shared_state, dashboard_app) -> None:
-    print("\n[3] Invalid strategy rejection")
+    print("\n[4] Invalid strategy rejection")
     client = dashboard_app.app.test_client()
     response = client.post("/api/switch-strategy", json={"strategy": "not_allowed"})
     assert response.status_code == 400
@@ -140,7 +204,7 @@ def verify_invalid_strategy_rejected(shared_state, dashboard_app) -> None:
 
 
 def verify_corrupted_state_recovery(shared_state) -> None:
-    print("\n[4] Corrupted shared-state recovery")
+    print("\n[5] Corrupted shared-state recovery")
     Path(os.environ["BTC_SOVEREIGN_STATE_FILE"]).write_text("{broken json", encoding="utf-8")
     state = shared_state.get_strategy_state()
     assert state["strategy"] == "auto"
@@ -160,6 +224,7 @@ def main() -> None:
         shared_state, sovereign_bot, dashboard_app = reload_runtime_modules()
 
         verify_dashboard_ui_contract()
+        verify_ai_assistant_flow(dashboard_app)
         verify_dashboard_to_bot_flow(shared_state, sovereign_bot, dashboard_app)
         verify_invalid_strategy_rejected(shared_state, dashboard_app)
         verify_corrupted_state_recovery(shared_state)
@@ -167,8 +232,9 @@ def main() -> None:
         log_text = Path(os.environ["BTC_SOVEREIGN_LOG_FILE"]).read_text(encoding="utf-8")
         assert "Strategy switch requested" in log_text
         assert "Strategy acknowledged" in log_text
-        print("\n[5] Log verification")
+        print("\n[6] Log verification")
         print("  Important strategy events were written to logs/sovereign_bot.log")
+        logging.shutdown()
 
     print("\nAll verification checks passed.")
     print("Dashboard-to-bot strategy synchronization is working in paper-safe mode.")
