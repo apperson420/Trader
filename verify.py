@@ -136,6 +136,7 @@ def verify_ai2_ollama_contract() -> None:
     assert "fallback_used" in assistant_service, "Assistant must report fallback usage."
     assert "urllib.request" in ollama_provider, "Ollama provider should use stdlib HTTP client only."
     assert "must not place trades" in ollama_provider.lower(), "Ollama prompt must keep trading boundary."
+    assert "from .assistant_service import" not in ollama_provider, "Ollama provider must not import assistant_service."
     assert "ProviderResult" in provider_base, "Provider base must expose normalized result."
     print("  Ollama is optional, disabled by default, safety-filtered, and has rule-based fallback")
 
@@ -247,26 +248,28 @@ def verify_corrupted_state_recovery(shared_state) -> None:
 
 def main() -> None:
     print("Starting BTC Sovereign verification...")
-    with tempfile.TemporaryDirectory(prefix="btc_sovereign_verify_") as tmp:
-        root = Path(tmp)
-        os.environ["BTC_SOVEREIGN_STATE_FILE"] = str(root / "current_strategy.json")
-        os.environ["BTC_SOVEREIGN_AUDIT_FILE"] = str(root / "logs" / "strategy_events.jsonl")
-        os.environ["BTC_SOVEREIGN_LOG_FILE"] = str(root / "logs" / "sovereign_bot.log")
+    try:
+        with tempfile.TemporaryDirectory(prefix="btc_sovereign_verify_", ignore_cleanup_errors=True) as tmp:
+            root = Path(tmp)
+            os.environ["BTC_SOVEREIGN_STATE_FILE"] = str(root / "current_strategy.json")
+            os.environ["BTC_SOVEREIGN_AUDIT_FILE"] = str(root / "logs" / "strategy_events.jsonl")
+            os.environ["BTC_SOVEREIGN_LOG_FILE"] = str(root / "logs" / "sovereign_bot.log")
 
-        shared_state, sovereign_bot, dashboard_app = reload_runtime_modules()
+            shared_state, sovereign_bot, dashboard_app = reload_runtime_modules()
 
-        verify_dashboard_ui_contract()
-        verify_ai2_ollama_contract()
-        verify_ai_assistant_flow(dashboard_app)
-        verify_dashboard_to_bot_flow(shared_state, sovereign_bot, dashboard_app)
-        verify_invalid_strategy_rejected(shared_state, dashboard_app)
-        verify_corrupted_state_recovery(shared_state)
+            verify_dashboard_ui_contract()
+            verify_ai2_ollama_contract()
+            verify_ai_assistant_flow(dashboard_app)
+            verify_dashboard_to_bot_flow(shared_state, sovereign_bot, dashboard_app)
+            verify_invalid_strategy_rejected(shared_state, dashboard_app)
+            verify_corrupted_state_recovery(shared_state)
 
-        log_text = Path(os.environ["BTC_SOVEREIGN_LOG_FILE"]).read_text(encoding="utf-8")
-        assert "Strategy switch requested" in log_text
-        assert "Strategy acknowledged" in log_text
-        print("\n[7] Log verification")
-        print("  Important strategy events were written to logs/sovereign_bot.log")
+            log_text = Path(os.environ["BTC_SOVEREIGN_LOG_FILE"]).read_text(encoding="utf-8")
+            assert "Strategy switch requested" in log_text
+            assert "Strategy acknowledged" in log_text
+            print("\n[7] Log verification")
+            print("  Important strategy events were written to logs/sovereign_bot.log")
+    finally:
         logging.shutdown()
 
     print("\nAll verification checks passed.")
