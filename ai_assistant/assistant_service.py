@@ -1,26 +1,50 @@
-# BTC Sovereign Phase 3 - Rule-Based Paper-Safe Assistant
-"""Local rule-based assistant for explaining BTC Sovereign dashboard status."""
+# BTC Sovereign Phase 3 AI-2 - Paper-Safe Assistant Service
+"""Local assistant for explaining BTC Sovereign dashboard status.
+
+AI-2 keeps the rule-based assistant as the dependable default and can optionally
+use a local Ollama model for richer wording. Safety filtering and safe-context
+construction always happen before any model call.
+"""
 
 from __future__ import annotations
 
 from typing import Any, Dict
 
+from sovereign_bot import load_config
+
 from .context_builder import build_safe_context
+from .ollama_provider import OllamaProvider
 from .safety_filter import evaluate_message_safety
 
 DISCLAIMER = "Education and paper-trading system help only. Not financial advice."
 
 
 class AssistantService:
-    """Small local assistant. No model dependency and no tool execution."""
+    """Paper-safe assistant. No tool execution and no trading actions."""
+
+    def __init__(self) -> None:
+        config = load_config()
+        assistant_config = config.get("assistant", {}) if isinstance(config.get("assistant"), dict) else {}
+        ollama_config = assistant_config.get("ollama", {}) if isinstance(assistant_config.get("ollama"), dict) else {}
+        self.use_ollama = bool(assistant_config.get("use_ollama", False))
+        self.provider = OllamaProvider(
+            model=str(ollama_config.get("model", "llama3")),
+            url=str(ollama_config.get("url", "http://127.0.0.1:11434/api/generate")),
+            timeout_seconds=float(ollama_config.get("timeout_seconds", 8.0)),
+        )
 
     def status(self) -> Dict[str, Any]:
+        provider_available = self.provider.is_available() if self.use_ollama else False
         return {
             "ok": True,
-            "mode": "rule_based_local",
+            "mode": "ollama_local" if self.use_ollama and provider_available else "rule_based_local",
             "paper_safe": True,
             "can_execute_trades": False,
             "can_switch_strategies": False,
+            "model_provider_enabled": self.use_ollama,
+            "model_provider": self.provider.name,
+            "model_available": provider_available,
+            "fallback": "rule_based_local",
             "disclaimer": DISCLAIMER,
         }
 
@@ -35,15 +59,44 @@ class AssistantService:
                 "blocked": True,
                 "category": decision.category,
                 "response": decision.reason,
+                "provider": "safety_filter",
+                "fallback_used": False,
                 "disclaimer": DISCLAIMER,
             }
 
         context = build_safe_context()
+        if self.use_ollama:
+            provider_result = self.provider.generate(message, context)
+            if provider_result.ok:
+                return {
+                    "ok": True,
+                    "blocked": False,
+                    "response": provider_result.response,
+                    "provider": provider_result.provider,
+                    "fallback_used": False,
+                    "context_used": list(context.keys()),
+                    "disclaimer": DISCLAIMER,
+                }
+
+            response = self._answer(message, context)
+            return {
+                "ok": True,
+                "blocked": False,
+                "response": f"{response}\n\nLocal model fallback note: {provider_result.error}",
+                "provider": "rule_based_local",
+                "fallback_used": True,
+                "model_error": provider_result.error,
+                "context_used": list(context.keys()),
+                "disclaimer": DISCLAIMER,
+            }
+
         response = self._answer(message, context)
         return {
             "ok": True,
             "blocked": False,
             "response": response,
+            "provider": "rule_based_local",
+            "fallback_used": False,
             "context_used": list(context.keys()),
             "disclaimer": DISCLAIMER,
         }
