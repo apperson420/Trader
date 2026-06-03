@@ -1,4 +1,4 @@
-# BTC Sovereign v1.7 - Verification Script
+# BTC Sovereign v1.8 - Verification Script
 """
 Run with: python verify.py
 
@@ -7,6 +7,8 @@ Checks:
 - dashboard-to-bot strategy synchronization without placing trades
 - heartbeat and acknowledgement status
 - dashboard template/JS contract for critical live status IDs
+- paper-safe assistant API and safety flow
+- optional Ollama provider fallback remains safe when disabled/unavailable
 - corrupted shared-state recovery
 """
 
@@ -23,6 +25,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 TEMPLATE_FILE = ROOT / "web_dashboard" / "templates" / "index.html"
 DASHBOARD_JS_FILE = ROOT / "web_dashboard" / "static" / "js" / "dashboard.js"
+CONFIG_FILE = ROOT / "config.json"
+ASSISTANT_SERVICE_FILE = ROOT / "ai_assistant" / "assistant_service.py"
+OLLAMA_PROVIDER_FILE = ROOT / "ai_assistant" / "ollama_provider.py"
+PROVIDER_BASE_FILE = ROOT / "ai_assistant" / "provider_base.py"
 
 
 EXPECTED_DASHBOARD_IDS = (
@@ -112,8 +118,30 @@ def verify_dashboard_ui_contract() -> None:
     print("  Dashboard IDs, strategy cards, ARIA state, and live JS hooks are present")
 
 
+def verify_ai2_ollama_contract() -> None:
+    print("\n[2] Optional Ollama provider contract")
+    config = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+    assistant_config = config.get("assistant", {})
+    assert assistant_config.get("use_ollama") is False, "Ollama must be disabled by default."
+    assert assistant_config.get("ollama", {}).get("url") == "http://127.0.0.1:11434/api/generate"
+
+    assistant_service = ASSISTANT_SERVICE_FILE.read_text(encoding="utf-8")
+    ollama_provider = OLLAMA_PROVIDER_FILE.read_text(encoding="utf-8")
+    provider_base = PROVIDER_BASE_FILE.read_text(encoding="utf-8")
+
+    assert "evaluate_message_safety(message)" in assistant_service, "Safety filter must run before provider calls."
+    assert "build_safe_context()" in assistant_service, "Assistant must use safe context builder."
+    assert "provider.generate(message, context)" in assistant_service, "Assistant must call provider with safe context only."
+    assert "_answer(message, context)" in assistant_service, "Rule-based fallback must remain available."
+    assert "fallback_used" in assistant_service, "Assistant must report fallback usage."
+    assert "urllib.request" in ollama_provider, "Ollama provider should use stdlib HTTP client only."
+    assert "must not place trades" in ollama_provider.lower(), "Ollama prompt must keep trading boundary."
+    assert "ProviderResult" in provider_base, "Provider base must expose normalized result."
+    print("  Ollama is optional, disabled by default, safety-filtered, and has rule-based fallback")
+
+
 def verify_ai_assistant_flow(dashboard_app) -> None:
-    print("\n[2] AI assistant safety flow")
+    print("\n[3] AI assistant safety flow")
     client = dashboard_app.app.test_client()
 
     status_response = client.get("/api/ai/status")
@@ -122,7 +150,10 @@ def verify_ai_assistant_flow(dashboard_app) -> None:
     assert status_payload["ok"] is True
     assert status_payload["paper_safe"] is True
     assert status_payload["can_execute_trades"] is False
-    print("  /api/ai/status reports local paper-safe assistant")
+    assert status_payload["can_switch_strategies"] is False
+    assert status_payload["model_provider_enabled"] is False
+    assert status_payload["fallback"] == "rule_based_local"
+    print("  /api/ai/status reports local paper-safe assistant with rule-based fallback")
 
     context_response = client.get("/api/ai/context")
     assert context_response.status_code == 200
@@ -152,6 +183,7 @@ def verify_ai_assistant_flow(dashboard_app) -> None:
     chat_payload = chat_response.get_json()
     assert chat_payload["ok"] is True
     assert chat_payload["blocked"] is False
+    assert chat_payload["provider"] == "rule_based_local"
     assert chat_payload["response"]
     print("  /api/ai/chat answers a basic status question")
 
@@ -164,7 +196,7 @@ def verify_ai_assistant_flow(dashboard_app) -> None:
 
 
 def verify_dashboard_to_bot_flow(shared_state, sovereign_bot, dashboard_app) -> None:
-    print("\n[3] Dashboard -> shared_state -> SovereignBot flow")
+    print("\n[4] Dashboard -> shared_state -> SovereignBot flow")
     bot = sovereign_bot.SovereignBot({"mode": "paper", "default_strategy": "auto"})
     assert bot.current_strategy == "auto", "Bot should start on auto"
 
@@ -193,7 +225,7 @@ def verify_dashboard_to_bot_flow(shared_state, sovereign_bot, dashboard_app) -> 
 
 
 def verify_invalid_strategy_rejected(shared_state, dashboard_app) -> None:
-    print("\n[4] Invalid strategy rejection")
+    print("\n[5] Invalid strategy rejection")
     client = dashboard_app.app.test_client()
     response = client.post("/api/switch-strategy", json={"strategy": "not_allowed"})
     assert response.status_code == 400
@@ -204,7 +236,7 @@ def verify_invalid_strategy_rejected(shared_state, dashboard_app) -> None:
 
 
 def verify_corrupted_state_recovery(shared_state) -> None:
-    print("\n[5] Corrupted shared-state recovery")
+    print("\n[6] Corrupted shared-state recovery")
     Path(os.environ["BTC_SOVEREIGN_STATE_FILE"]).write_text("{broken json", encoding="utf-8")
     state = shared_state.get_strategy_state()
     assert state["strategy"] == "auto"
@@ -224,6 +256,7 @@ def main() -> None:
         shared_state, sovereign_bot, dashboard_app = reload_runtime_modules()
 
         verify_dashboard_ui_contract()
+        verify_ai2_ollama_contract()
         verify_ai_assistant_flow(dashboard_app)
         verify_dashboard_to_bot_flow(shared_state, sovereign_bot, dashboard_app)
         verify_invalid_strategy_rejected(shared_state, dashboard_app)
@@ -232,12 +265,12 @@ def main() -> None:
         log_text = Path(os.environ["BTC_SOVEREIGN_LOG_FILE"]).read_text(encoding="utf-8")
         assert "Strategy switch requested" in log_text
         assert "Strategy acknowledged" in log_text
-        print("\n[6] Log verification")
+        print("\n[7] Log verification")
         print("  Important strategy events were written to logs/sovereign_bot.log")
         logging.shutdown()
 
     print("\nAll verification checks passed.")
-    print("Dashboard-to-bot strategy synchronization is working in paper-safe mode.")
+    print("Dashboard-to-bot strategy synchronization and assistant safety flow are working in paper-safe mode.")
 
 
 if __name__ == "__main__":
