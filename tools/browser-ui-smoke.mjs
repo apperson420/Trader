@@ -26,6 +26,7 @@ const requiredHtml = [
 
 const requiredFiles = [
   'paper-broker.js',
+  'final-product-state.js',
   'live-trading-control.js',
   'ai-live-assist.js',
   'mode-control-center.js',
@@ -214,6 +215,7 @@ async function tryPlaywrightSmoke() {
   });
   try {
     await page.goto(smokeServer.url, { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('#finalProductState');
     await page.waitForFunction(() => {
       const watchlist = document.getElementById('watchlist');
       const journal = document.getElementById('journalList');
@@ -246,6 +248,8 @@ async function tryPlaywrightSmoke() {
     await page.waitForSelector('#manualLiveOrderTicket');
     await page.waitForSelector('#aiLiveAssist');
     const liveTicketState = await page.evaluate(() => ({
+      finalProduct: document.getElementById('finalProductState')?.textContent.includes('Final Product State'),
+      beginnerStart: Boolean(document.getElementById('finalBeginnerStart')),
       exists: Boolean(document.getElementById('manualLiveOrderTicket')),
       locked: Boolean(document.getElementById('liveTicketSubmit')?.disabled),
       warning: document.getElementById('liveTradingControl')?.textContent.includes('Real money can be lost'),
@@ -253,7 +257,7 @@ async function tryPlaywrightSmoke() {
       noAi: document.getElementById('liveTradingControl')?.textContent.includes('AI/autopilot cannot submit live trades'),
       aiLiveAssist: document.getElementById('aiLiveAssist')?.textContent.includes('AI cannot submit live trades')
     }));
-    if (!liveTicketState.exists || !liveTicketState.locked || !liveTicketState.warning || !liveTicketState.phrase || !liveTicketState.noAi || !liveTicketState.aiLiveAssist) fail(`manual live ticket safety state failed: ${JSON.stringify(liveTicketState)}`);
+    if (!liveTicketState.finalProduct || !liveTicketState.beginnerStart || !liveTicketState.exists || !liveTicketState.locked || !liveTicketState.warning || !liveTicketState.phrase || !liveTicketState.noAi || !liveTicketState.aiLiveAssist) fail(`manual live ticket safety state failed: ${JSON.stringify(liveTicketState)}`);
     await page.click('#brokerSetupCheck');
     await page.waitForFunction(() => {
       const output = document.getElementById('brokerSetupOutput')?.textContent || '';
@@ -311,6 +315,7 @@ for (const file of requiredFiles) {
 const broker = readFileSync(resolve(root, 'paper-broker.js'), 'utf8');
 const brokerApi = readFileSync(resolve(root, 'api/alpaca-paper.js'), 'utf8');
 const persistence = readFileSync(resolve(root, 'persistence-engine.js'), 'utf8');
+const finalProduct = readFileSync(resolve(root, 'final-product-state.js'), 'utf8');
 const liveControl = readFileSync(resolve(root, 'live-trading-control.js'), 'utf8');
 const aiLiveAssist = readFileSync(resolve(root, 'ai-live-assist.js'), 'utf8');
 const modeControl = readFileSync(resolve(root, 'mode-control-center.js'), 'utf8');
@@ -319,7 +324,7 @@ const onboarding = readFileSync(resolve(root, 'onboarding-wizard.js'), 'utf8');
 const guided = readFileSync(resolve(root, 'guided-workflow.js'), 'utf8');
 const autonomy = readFileSync(resolve(root, 'autonomous-engine.js'), 'utf8');
 const hub = readFileSync(resolve(root, 'free-tools-hub.js'), 'utf8');
-const browserSources = [liveControl, aiLiveAssist, modeControl, guided, autonomy, hub, readFileSync(resolve(root, 'app.js'), 'utf8')].join('\n');
+const browserSources = [finalProduct, liveControl, aiLiveAssist, modeControl, guided, autonomy, hub, readFileSync(resolve(root, 'app.js'), 'utf8')].join('\n');
 const behaviorChecks = [
   ['Alpaca setup wizard visible', broker.includes('Paper setup wizard')],
   ['Alpaca setup-status API call wired', broker.includes("api('setup-status')")],
@@ -327,6 +332,8 @@ const behaviorChecks = [
   ['Full backup export present', persistence.includes('Export full backup JSON')],
   ['Backup import present', persistence.includes('Import backup JSON')],
   ['Supabase fallback message present', persistence.includes('LocalStorage fallback is active')],
+  ['Final Product State panel exists', finalProduct.includes('Final Product State') && finalProduct.includes('Beginner Safe Start')],
+  ['Final Product State preserves locked live boundaries', finalProduct.includes('unattended autonomous live trading') && finalProduct.includes('AI live order submission') && finalProduct.includes('Manual Live Ticket only after all live gates are configured and reviewed')],
   ['Live control module exists', liveControl.includes('Manual Live Order Ticket') && liveControl.includes('manualLiveOrderTicket')],
   ['AI Live Assist draft-only module exists', aiLiveAssist.includes('AI Live Assist') && aiLiveAssist.toLowerCase().includes('draft only')],
   ['AI Live Assist cannot submit or approve live trades', !aiLiveAssist.includes('alpaca-live') && !aiLiveAssist.includes('liveTicketSubmit') && !aiLiveAssist.includes('liveTicketHumanReviewed') && !aiLiveAssist.includes('LIVE ORDER - I ACCEPT REAL MONEY RISK')],

@@ -43,6 +43,7 @@ const required = [
   'live-trading-control.js',
   'mode-control-center.js',
   'persistence-engine.js',
+  'final-product-state.js',
   'owner-access-center.js',
   'ai-review-coach.js',
   'ai-live-assist.js',
@@ -56,6 +57,7 @@ const required = [
   'tools/release-manifest.mjs',
   'docs/AUTONOMY_POLICY.md',
   'docs/AI_LIVE_ASSIST.md',
+  'docs/FINAL_PRODUCT_STATE.md',
   'docs/LIVE_TRADING_SAFETY.md'
 ];
 
@@ -70,10 +72,12 @@ const docs = read('docs/LIVE_TRADING_SAFETY.md');
 const app = read('app.js');
 const aiLiveAssistExists = existsSync(resolve(root, 'ai-live-assist.js'));
 const aiLiveAssist = readIfExists('ai-live-assist.js');
+const finalProduct = read('final-product-state.js');
 
 const expectedLoadedModules = [
   'live-trading-control.js',
   'mode-control-center.js',
+  'final-product-state.js',
   'owner-access-center.js',
   'ai-review-coach.js',
   'ai-live-assist.js',
@@ -139,6 +143,15 @@ contains(manifest, 'AI Live Assist draft-only mode', 'manifest documents AI Live
 contains(manifest, 'Decision Approval Center', 'manifest documents Decision Approval Center');
 contains(manifest, 'Owner Access Center', 'manifest documents Owner Access Center');
 contains(manifest, 'Human-approved live ticket boundary', 'manifest documents human-approved live ticket boundary');
+contains(manifest, 'Final Product State panel', 'manifest documents Final Product State panel');
+
+contains(finalProduct, 'Final Product State', 'Final Product State panel text exists');
+contains(finalProduct, 'Beginner Safe Start', 'Beginner Safe Start button exists');
+contains(finalProduct, 'AI Live Assist draft-only mode', 'Final Product State lists AI Live Assist draft-only mode');
+contains(finalProduct, 'Manual Live Ticket only after all live gates are configured and reviewed', 'Final Product State preserves manual live gate boundary');
+contains(finalProduct, 'unattended autonomous live trading', 'Final Product State lists unattended autonomous live trading as locked');
+contains(finalProduct, 'AI live order submission', 'Final Product State blocks AI live order submission');
+notContains(finalProduct.toLowerCase(), 'guarantee profit', 'Final Product State does not introduce profit guarantees');
 
 contains(docs, 'TRADER_LIVE_KILL_SWITCH=LOCK_LIVE_TRADING', 'docs include kill switch setup');
 contains(docs, 'TRADER_LIVE_ALLOWED_SYMBOLS', 'docs include symbol allowlist setup');

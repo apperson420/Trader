@@ -41,6 +41,7 @@ const manifest = {
     'Optional live symbol allowlist via TRADER_LIVE_ALLOWED_SYMBOLS',
     'Browser/UI smoke fallback for npm-missing QA',
     'First-run setup wizard with beginner-safe product guidance',
+    'Final Product State panel with beginner setup order and locked capability boundaries',
     'Professional chart engine',
     'Supabase-ready persistence with localStorage fallback and full JSON backup',
     'Full free tools integration hub',

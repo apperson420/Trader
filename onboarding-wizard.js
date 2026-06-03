@@ -10,6 +10,8 @@
   };
   const targetAliases = {
     '#watchForm': '#watchForm',
+    '#finalProductState': '#finalProductState',
+    '#setupStatusCenter': '#setupStatusCenter',
     '#marketIntel': '#marketIntel',
     '#chartEngine': '#chartEngine',
     '#realResultsEngine': '#realResultsEngine',
@@ -18,6 +20,20 @@
     '#paperBroker': '#paperBroker'
   };
   const steps = [
+    {
+      id: 'final-state',
+      title: 'Start at Final Product State',
+      text: 'See what is ready, what is optional, and what is locked before clicking deeper controls.',
+      target: '#finalProductState',
+      button: 'Open Product State'
+    },
+    {
+      id: 'setup-status',
+      title: 'Run Setup Status Center',
+      text: 'Check what works now and what optional accounts are still locked or missing.',
+      target: '#setupStatusCenter',
+      button: 'Open Setup Status'
+    },
     {
       id: 'watchlist',
       title: 'Add your first watchlist symbol',
@@ -187,7 +203,7 @@
     dock.className = 'setup-dock';
     dock.innerHTML = `
       <div class="setup-dock-head">
-        <div><span class="label">First-run setup</span><h3>Start safely in 10 minutes</h3><p class="muted">This setup guide now lives inside the page, so it does not cover or overlap the dashboard.</p></div>
+      <div><span class="label">First-run setup</span><h3>Start safely in 10 minutes</h3><p class="muted">Begin at Final Product State, then run Setup Status Center before changing data or setup.</p></div>
         <div class="setup-dock-actions">
           <button id="setupWizardOpen" type="button" aria-controls="setupWizard" aria-expanded="false">Open setup wizard</button>
           <button id="setupWizardDone" class="setup-secondary" type="button">Do not show again</button>
@@ -195,7 +211,8 @@
       </div>
       <aside id="setupWizard" class="setup-wizard" aria-hidden="true">
         <div class="setup-copy">
-          <div class="setup-note"><strong>Paper and research only</strong><p>No real-money trades are sent. This app helps you study, chart, test, validate, and journal ideas. It is not investment advice.</p></div>
+          <div class="setup-note"><strong>Start with the product map</strong><p>Open Final Product State first. Then run Setup Status Center and export a No-Loss Data Vault before changing anything.</p></div>
+          <div class="setup-note"><strong>Paper and research only</strong><p>No real-money trades are sent from the normal research flow. This app helps you study, chart, test, validate, and journal ideas. It is not investment advice.</p></div>
           <div class="setup-note"><strong>What works now</strong><p>Watchlist, journal, Smart Analyst, Market Intelligence, historical charts, 100-generation evolution, validation, backup export/import, and optional paper-broker setup checks.</p></div>
           <div class="setup-note"><strong>Optional setup</strong><p>Alpaca paper keys, Supabase backup, OpenAI, and stock quote keys belong in Vercel server settings. The app still works without them.</p></div>
           <div class="section-head"><div><span class="label">Checklist</span><h3>What to click first</h3></div><strong id="setupWizardCount">0/${steps.length} done</strong></div>
